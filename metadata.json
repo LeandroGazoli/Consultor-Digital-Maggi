@@ -1,0 +1,7 @@
+{
+  "name": "Maggi Mobile App Specification & Prototype",
+  "description": "Uma especificação completa e protótipo funcional para o ecossistema de concessionárias Maggi, integrando agendamento, estoque e leads.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
