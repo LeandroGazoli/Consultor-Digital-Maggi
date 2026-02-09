@@ -54,16 +54,38 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
   {
     id: 'c1',
     title: 'Festival de Seminovos Maggi',
-    subtitle: 'Taxas reduzidas e primeira parcela para 90 dias.',
+    subtitle: 'Taxas reduzidas de 0,99% a.m. e primeira parcela para 90 dias.',
     image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=1200&auto=format&fit=crop',
-    validUntil: '30/11/2024'
+    validUntil: '30/11/2024',
+    type: 'SALES',
+    badge: 'Oportunidade'
   },
   {
     id: 'c2',
     title: 'Revisão Maggi Toyota',
-    subtitle: 'Mantenha sua garantia com parcelas em até 10x sem juros.',
+    subtitle: 'Mantenha sua garantia com parcelas em até 10x sem juros no cartão.',
     image: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=1200&auto=format&fit=crop',
-    validUntil: '15/12/2024'
+    validUntil: '15/12/2024',
+    type: 'SERVICE',
+    badge: 'Pós-Venda'
+  },
+  {
+    id: 'c3',
+    title: 'BYD Dolphin Mini: Oferta Zero',
+    subtitle: 'Bônus de R$ 5.000,00 na troca do seu usado por um 100% elétrico.',
+    image: 'https://images.unsplash.com/photo-1619767886558-efdc259cde1a?q=80&w=1200&auto=format&fit=crop',
+    validUntil: '20/11/2024',
+    type: 'SALES',
+    badge: 'Novo 0km'
+  },
+  {
+    id: 'c4',
+    title: 'Check-up de Verão Maggi',
+    subtitle: 'Higienização do ar-condicionado + 25 itens inspecionados grátis.',
+    image: 'https://images.unsplash.com/photo-1562621371-1d90467ae68d?q=80&w=1200&auto=format&fit=crop',
+    validUntil: '31/12/2024',
+    type: 'SERVICE',
+    badge: 'Segurança'
   }
 ];
 

@@ -8,7 +8,8 @@ export enum AppView {
   PROFILE = 'profile',
   SPEC = 'spec',
   CHAT = 'chat',
-  MY_VEHICLE = 'my_vehicle'
+  MY_VEHICLE = 'my_vehicle',
+  OFFERS = 'offers'
 }
 
 export interface Vehicle {
@@ -31,6 +32,8 @@ export interface Campaign {
   subtitle: string;
   image: string;
   validUntil: string;
+  type: 'SALES' | 'SERVICE';
+  badge?: string;
 }
 
 export interface Appointment {

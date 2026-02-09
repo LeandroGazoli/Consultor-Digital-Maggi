@@ -32,32 +32,35 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setActiveView }) 
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto pb-40 bg-[#f8fafc]">
+      <main className="flex-1 overflow-y-auto pb-32 bg-[#fcfdfe]">
         {children}
       </main>
 
-      {/* Bottom Navigation - Espaçamento Maximizado (Justify-Around) */}
-      <nav className="fixed bottom-0 left-0 right-0 md:relative bg-white border-t border-gray-100 safe-area-bottom flex justify-around items-center py-6 px-0 z-50 max-w-md mx-auto shadow-[0_-25px_60px_rgba(0,0,0,0.08)]">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeView === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveView(item.id)}
-              className={`flex flex-col items-center transition-all duration-500 group flex-1 ${
-                isActive ? 'text-[#0071C2]' : 'text-gray-300'
-              }`}
-            >
-              <div className={`p-3 rounded-[1.5rem] transition-all duration-500 ${isActive ? 'bg-blue-50 scale-110 shadow-sm' : 'bg-transparent group-active:scale-90'}`}>
-                <Icon size={26} strokeWidth={isActive ? 2.5 : 2} />
-              </div>
-              <span className={`mt-0.5 text-[9px] font-black tracking-widest leading-none transition-all duration-500 uppercase text-center ${isActive ? 'opacity-100' : 'opacity-40'}`}>
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
+      {/* Bottom Navigation - Ultra Clean & Integrated */}
+      <nav className="fixed bottom-0 left-0 right-0 md:relative bg-white/95 backdrop-blur-2xl border-t border-gray-100 safe-area-bottom z-50 max-w-md mx-auto shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+        <div className="grid grid-cols-4 w-full py-4 px-0">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveView(item.id)}
+                className={`flex flex-col items-center justify-center transition-all duration-300 group ${
+                  isActive ? 'text-[#0071C2]' : 'text-gray-400'
+                }`}
+              >
+                <div className={`transition-all duration-300 ${isActive ? 'scale-110' : 'group-active:scale-90'}`}>
+                  <Icon size={24} strokeWidth={isActive ? 2.5 : 1.8} />
+                </div>
+                
+                <span className={`mt-1 text-[9px] font-bold tracking-[0.1em] leading-tight transition-all duration-300 uppercase text-center ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </nav>
     </div>
   );
