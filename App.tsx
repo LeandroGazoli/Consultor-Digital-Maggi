@@ -1,16 +1,16 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AppView, Vehicle, Appointment, Campaign } from './types';
+import { AppView, Vehicle, Appointment, Campaign, Unit } from './types';
 import Layout from './components/Layout';
 import SpecificationDoc from './components/SpecificationDoc';
-import { MOCK_VEHICLES, UNITS, SERVICES, MOCK_CAMPAIGNS } from './constants';
+import { MOCK_VEHICLES, UNITS, SERVICES, MOCK_CAMPAIGNS, MOCK_UNITS, BRANDS } from './constants';
 import { 
   Search, MessageCircle, Phone, MapPin, ChevronRight, 
   Calendar as CalendarIcon, ChevronLeft, Sparkles, Car, 
   Tag, FileText, CircleDollarSign, Users2, ArrowRight, 
   Heart, Store, Send, Loader2, ExternalLink, CarFront, ShieldCheck, Newspaper,
   History, Award, Zap, Wrench, Target, Eye, Star, Clock, CheckCircle2, Filter, Info,
-  Flame, Gift
+  Flame, Gift, PiggyBank, HandCoins, ShieldEllipsis, BadgePercent, Navigation
 } from 'lucide-react';
 import { getFastVehicleRecommendation, startMaggiChat, getUnitsWithMaps } from './services/geminiService';
 
@@ -32,6 +32,12 @@ const App: React.FC = () => {
 
   // Ofertas State
   const [offersCategory, setOffersCategory] = useState<'ALL' | 'SALES' | 'SERVICE'>('ALL');
+
+  // Lojas State
+  const [unitFilterState, setUnitFilterState] = useState('');
+  const [unitFilterCity, setUnitFilterCity] = useState('');
+  const [unitFilterBrand, setUnitFilterBrand] = useState('');
+  const [isFiltering, setIsFiltering] = useState(false);
 
   const [chatMessages, setChatMessages] = useState<{role: 'user'|'model', text: string}[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -80,13 +86,18 @@ const App: React.FC = () => {
     });
   };
 
+  const handleApplyFilters = () => {
+    setIsFiltering(true);
+    setTimeout(() => setIsFiltering(false), 600);
+  };
+
   const actions = [
     { label: 'Revisão', icon: CalendarIcon, color: 'text-[#0071C2]', view: AppView.SCHEDULE },
     { label: 'Estoque', icon: Car, color: 'text-[#0071C2]', view: AppView.STOCK },
     { label: 'Veículo', icon: CarFront, color: 'text-[#0071C2]', view: AppView.MY_VEHICLE },
     { label: 'Ofertas', icon: Tag, color: 'text-[#f89a1e]', view: AppView.OFFERS },
     { label: 'Financiar', icon: CircleDollarSign, color: 'text-[#0071C2]' },
-    { label: 'Consórcio', icon: Users2, color: 'text-[#0071C2]' },
+    { label: 'Consórcio', icon: Users2, color: 'text-[#0071C2]', view: AppView.CONSORTIUM },
     { label: 'Lojas', icon: Store, color: 'text-[#0071C2]', view: AppView.UNITS },
     { label: 'Novidades', icon: Newspaper, color: 'text-[#0071C2]', view: AppView.HOME },
   ];
@@ -332,7 +343,7 @@ const App: React.FC = () => {
                     <button 
                       key={time}
                       onClick={() => setSelectedTime(time)}
-                      className={`py-3 rounded-xl text-[9px] font-black transition-all border flex items-center justify-center gap-1.5
+                      className={`py-3 rounded-xl text-[9px] font-black transition-all border items-center justify-center gap-1.5 flex
                         ${isSelected ? 'bg-[#0071C2] border-[#0071C2] text-white' : 'bg-gray-50 border-transparent text-gray-500 hover:bg-white hover:border-blue-100'}
                       `}
                     >
@@ -587,6 +598,84 @@ const App: React.FC = () => {
     );
   };
 
+  const renderConsortium = () => (
+    <div className="p-8 space-y-8 animate-in fade-in h-full bg-white rounded-t-[3rem] mt-4 min-h-[85vh] shadow-sm pb-32">
+      <div className="flex justify-between items-center px-2">
+        <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Consórcio Maggi</h2>
+        <div className="p-2.5 bg-blue-50 rounded-xl text-[#0071C2]"><Users2 size={28} /></div>
+      </div>
+
+      <div className="relative h-48 rounded-[2.5rem] overflow-hidden">
+        <img 
+          src="https://images.unsplash.com/photo-1560520653-9e0e4c89eb11?q=80&w=1200&auto=format&fit=crop" 
+          className="w-full h-full object-cover" 
+          alt="Consórcio"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0071C2]/80 to-transparent flex items-center p-8">
+          <div className="text-white">
+            <h3 className="text-lg font-black uppercase tracking-tight leading-tight mb-2">A forma mais inteligente de conquistar seu bem.</h3>
+            <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">Planejamento e Tradição</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] pl-2">Vantagens Maggi</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 flex flex-col gap-3">
+            <div className="text-[#f89a1e]"><BadgePercent size={24} /></div>
+            <div>
+              <p className="text-[10px] font-black text-[#0a1d37] uppercase tracking-tight mb-1">Sem Juros</p>
+              <p className="text-[8px] text-gray-400 font-bold uppercase leading-tight tracking-tighter">Taxas administrativas competitivas.</p>
+            </div>
+          </div>
+          <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 flex flex-col gap-3">
+            <div className="text-[#0071C2]"><ShieldEllipsis size={24} /></div>
+            <div>
+              <p className="text-[10px] font-black text-[#0a1d37] uppercase tracking-tight mb-1">Garantia</p>
+              <p className="text-[8px] text-gray-400 font-bold uppercase leading-tight tracking-tighter">Grupo consolidado no mercado.</p>
+            </div>
+          </div>
+          <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 flex flex-col gap-3">
+            <div className="text-[#0071C2]"><PiggyBank size={24} /></div>
+            <div>
+              <p className="text-[10px] font-black text-[#0a1d37] uppercase tracking-tight mb-1">Flexível</p>
+              <p className="text-[8px] text-gray-400 font-bold uppercase leading-tight tracking-tighter">Prazos que cabem no seu bolso.</p>
+            </div>
+          </div>
+          <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 flex flex-col gap-3">
+            <div className="text-[#0071C2]"><HandCoins size={24} /></div>
+            <div>
+              <p className="text-[10px] font-black text-[#0a1d37] uppercase tracking-tight mb-1">Poder de Compra</p>
+              <p className="text-[8px] text-gray-400 font-bold uppercase leading-tight tracking-tighter">Carta de crédito com valor de à vista.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-blue-50/50 p-8 rounded-[2.5rem] border border-blue-100 text-center space-y-4">
+        <h4 className="text-[11px] font-black text-[#0071C2] uppercase tracking-[0.2em]">Pronto para realizar seu sonho?</h4>
+        <p className="text-[10px] text-gray-500 font-medium leading-relaxed italic px-4">
+          Nossos especialistas estão prontos para criar um plano personalizado para você.
+        </p>
+        <button 
+          onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Vim pelo app Maggi e gostaria de simular uma cota de consórcio.', '_blank')}
+          className="w-full bg-[#f89a1e] text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg shadow-orange-200 flex items-center justify-center gap-3 active:scale-95 transition-all"
+        >
+          <MessageCircle size={18} />
+          Quero simular minha cota
+        </button>
+      </div>
+
+      <div className="flex items-center gap-4 p-6 border border-gray-100 rounded-[2rem] opacity-50">
+        <Info size={20} className="text-gray-400" />
+        <p className="text-[8px] font-bold text-gray-400 uppercase leading-relaxed tracking-wider">
+          O Consórcio Maggi é administrado por entidades autorizadas pelo Banco Central do Brasil.
+        </p>
+      </div>
+    </div>
+  );
+
   const renderMyVehicle = () => (
     <div className="p-8 space-y-8 animate-in fade-in h-full bg-white rounded-t-[3rem] mt-4 min-h-[85vh] shadow-sm">
       <div className="flex justify-between items-center px-2">
@@ -658,40 +747,154 @@ const App: React.FC = () => {
     </div>
   );
 
-  const renderUnits = () => (
-    <div className="p-8 space-y-8 animate-in fade-in h-full bg-white rounded-t-[3rem] shadow-sm mt-4 min-h-[85vh]">
-        <div className="flex justify-between items-center px-2">
-            <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Lojas Maggi</h2>
-            <div className="p-2.5 bg-blue-50 rounded-xl text-[#0071C2]"><MapPin size={28} /></div>
-        </div>
-        {isMapsLoading ? (
-          <div className="flex flex-col items-center py-24 gap-6 opacity-30">
-            <Loader2 className="animate-spin" size={48} />
-            <p className="font-black uppercase text-[10px] tracking-[0.3em]">Buscando unidades...</p>
+  const renderUnits = () => {
+    // Lógica de Filtro
+    const states = Array.from(new Set(MOCK_UNITS.map(u => u.state)));
+    const cities = Array.from(new Set(MOCK_UNITS.filter(u => !unitFilterState || u.state === unitFilterState).map(u => u.city)));
+
+    const filteredUnits = MOCK_UNITS
+      .filter(u => {
+        const stateMatch = !unitFilterState || u.state === unitFilterState;
+        const cityMatch = !unitFilterCity || u.city === unitFilterCity;
+        const brandMatch = !unitFilterBrand || u.brands.includes(unitFilterBrand);
+        return stateMatch && cityMatch && brandMatch;
+      })
+      .sort((a, b) => (a.distance || 0) - (b.distance || 0));
+
+    return (
+      <div className="p-8 space-y-8 animate-in fade-in h-full bg-white rounded-t-[3rem] shadow-sm mt-4 min-h-[85vh] pb-32">
+          {/* Header Section - More Clean */}
+          <div className="flex justify-between items-baseline px-2 border-b border-gray-50 pb-4">
+              <h2 className="text-xl font-medium text-gray-700 tracking-tight">Lojas Maggi</h2>
+              <span className="text-[10px] font-bold text-[#0071C2] uppercase tracking-[0.2em] opacity-40">Proximidade</span>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {mapsData.text && (
-              <div className="p-6 bg-blue-50/30 rounded-2xl border border-blue-50 text-xs leading-relaxed text-gray-500 italic">
-                {mapsData.text}
+
+          {/* Filtros Section - Improved Readability */}
+          <div className="space-y-6 px-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 pl-1">Estado</label>
+                <select 
+                  value={unitFilterState}
+                  onChange={(e) => {setUnitFilterState(e.target.value); setUnitFilterCity('');}}
+                  className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[11px] font-bold text-gray-600 focus:ring-2 focus:ring-blue-100 focus:outline-none appearance-none cursor-pointer w-full transition-all"
+                >
+                  <option value="">Todos Estados</option>
+                  {states.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
-            )}
-            {UNITS.map((unit, i) => (
-                <div key={i} className="bg-white p-6 rounded-3xl border border-gray-100 flex items-center justify-between shadow-[0_4px_15px_rgba(0,0,0,0.01)] hover:border-blue-100/50 transition-all active:scale-[0.98]">
-                    <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-[#0071C2] font-black text-xl">{unit.charAt(0)}</div>
-                        <div>
-                            <p className="text-md font-black text-[#0a1d37] uppercase tracking-tight">{unit}</p>
-                            <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest mt-1">Aberto agora</p>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 pl-1">Cidade</label>
+                <select 
+                  value={unitFilterCity}
+                  onChange={(e) => setUnitFilterCity(e.target.value)}
+                  className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[11px] font-bold text-gray-600 focus:ring-2 focus:ring-blue-100 focus:outline-none appearance-none cursor-pointer w-full transition-all"
+                >
+                  <option value="">Todas Cidades</option>
+                  {cities.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 pl-1">Marca / Bandeira</label>
+                <select 
+                  value={unitFilterBrand}
+                  onChange={(e) => setUnitFilterBrand(e.target.value)}
+                  className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[11px] font-bold text-gray-600 focus:ring-2 focus:ring-blue-100 focus:outline-none appearance-none cursor-pointer w-full transition-all"
+                >
+                  <option value="">Todas as Marcas</option>
+                  {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+            </div>
+
+            {/* Action Button - The "Bring Units" trigger */}
+            <button 
+              onClick={handleApplyFilters}
+              className="w-full bg-[#0071C2] hover:bg-[#005fa3] text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-blue-100 flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+            >
+              {isFiltering ? <Loader2 className="animate-spin" size={16} /> : <Search size={16} />}
+              Buscar Unidades
+            </button>
+          </div>
+
+          {isMapsLoading ? (
+            <div className="flex flex-col items-center py-24 gap-6 opacity-30">
+              <Loader2 className="animate-spin" size={48} />
+              <p className="font-black uppercase text-[10px] tracking-[0.3em]">Buscando unidades...</p>
+            </div>
+          ) : (
+            <div className={`space-y-6 transition-all duration-500 ${isFiltering ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}>
+              {mapsData.text && (
+                <div className="p-6 bg-blue-50/30 rounded-2xl border border-blue-50 text-xs leading-relaxed text-gray-500 italic">
+                  <div className="flex items-start gap-3">
+                    <Sparkles size={16} className="text-[#0071C2] mt-0.5" />
+                    <p>{mapsData.text}</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                {filteredUnits.map((unit) => (
+                    <div key={unit.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-[0_4px_25px_rgba(0,0,0,0.02)] transition-all active:scale-[0.98]">
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-[#0071C2] font-black text-xl">{unit.name.charAt(6)}</div>
+                                <div>
+                                    <p className="text-sm font-black text-[#0a1d37] uppercase tracking-tight">{unit.name}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="text-[8px] text-green-500 font-bold uppercase tracking-widest">Aberto agora</span>
+                                      {unit.distance && (
+                                        <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                                          • <Navigation size={8} /> {unit.distance} km
+                                        </span>
+                                      )}
+                                    </div>
+                                </div>
+                            </div>
+                            <button onClick={() => window.open(`tel:${unit.phone}`)} className="p-4 bg-gray-50 rounded-xl text-[#0071C2] active:scale-90 transition-transform"><Phone size={18} /></button>
+                        </div>
+                        
+                        <div className="space-y-3 mb-6">
+                          <div className="flex items-center gap-2 text-gray-400">
+                            <MapPin size={12} className="opacity-40" />
+                            <p className="text-[10px] font-medium leading-tight">{unit.address}, {unit.city} - {unit.state}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {unit.brands.map(brand => (
+                              <span key={brand} className="px-3 py-1 bg-gray-50 rounded-full text-[8px] font-bold text-gray-400 uppercase tracking-wider border border-gray-100">{brand}</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <button 
+                            onClick={() => setActiveView(AppView.SCHEDULE)}
+                            className="py-4 bg-[#0071C2] text-white rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
+                          >
+                            <CalendarIcon size={12} /> Agendar
+                          </button>
+                          <button className="py-4 border border-gray-100 text-gray-400 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
+                            <ExternalLink size={12} /> Rota
+                          </button>
                         </div>
                     </div>
-                    <div className="p-4 bg-gray-50 rounded-xl text-[#0071C2] active:scale-90 transition-transform"><Phone size={20} /></div>
-                </div>
-            ))}
-          </div>
-        )}
-    </div>
-  );
+                ))}
+                
+                {filteredUnits.length === 0 && (
+                   <div className="py-20 text-center opacity-30">
+                    <Store size={64} className="mx-auto mb-4" strokeWidth={1} />
+                    <p className="font-black uppercase text-[10px] tracking-[0.3em]">Nenhuma unidade encontrada.</p>
+                    <button onClick={() => {setUnitFilterState(''); setUnitFilterCity(''); setUnitFilterBrand('');}} className="mt-4 text-[9px] font-black text-[#0071C2] uppercase underline">Limpar Filtros</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+      </div>
+    );
+  };
 
   const renderContent = () => {
     switch (activeView) {
@@ -702,6 +905,7 @@ const App: React.FC = () => {
       case AppView.SCHEDULE: return renderSchedule();
       case AppView.STOCK: return renderStock();
       case AppView.OFFERS: return renderOffers();
+      case AppView.CONSORTIUM: return renderConsortium();
       case AppView.PROFILE: return <div className="p-24 text-center font-black opacity-10 text-[10px] tracking-[0.4em] uppercase">Área do Cliente</div>;
       case AppView.SPEC: return <SpecificationDoc />;
       default: return renderHome();

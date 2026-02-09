@@ -9,7 +9,19 @@ export enum AppView {
   SPEC = 'spec',
   CHAT = 'chat',
   MY_VEHICLE = 'my_vehicle',
-  OFFERS = 'offers'
+  OFFERS = 'offers',
+  CONSORTIUM = 'consortium'
+}
+
+export interface Unit {
+  id: string;
+  name: string;
+  state: string;
+  city: string;
+  brands: string[];
+  address: string;
+  phone: string;
+  distance?: number; // em km
 }
 
 export interface Vehicle {

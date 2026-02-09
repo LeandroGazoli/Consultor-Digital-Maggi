@@ -1,5 +1,5 @@
 
-import { Vehicle, Campaign } from './types';
+import { Vehicle, Campaign, Unit } from './types';
 
 export const COLORS = {
   primary: '#1473e6', // Azul Maggi
@@ -7,6 +7,15 @@ export const COLORS = {
   dark: '#0a1d37',
   light: '#f4f7fa',
 };
+
+export const MOCK_UNITS: Unit[] = [
+  { id: 'u1', name: 'Maggi Itu Matriz', state: 'SP', city: 'Itu', brands: ['Volkswagen', 'Toyota'], address: 'Av. Tiradentes, 1000', phone: '(11) 4013-9000', distance: 2.5 },
+  { id: 'u2', name: 'Maggi Indaiatuba', state: 'SP', city: 'Indaiatuba', brands: ['Volkswagen', 'BYD'], address: 'Av. Visconde de Indaiatuba, 500', phone: '(19) 3801-8000', distance: 15.2 },
+  { id: 'u3', name: 'Maggi Salto', state: 'SP', city: 'Salto', brands: ['Toyota'], address: 'Rua Nove de Julho, 120', phone: '(11) 4602-7000', distance: 8.7 },
+  { id: 'u4', name: 'Maggi Sorocaba', state: 'SP', city: 'Sorocaba', brands: ['Volkswagen', 'Jeep'], address: 'Av. Dom Aguirre, 2000', phone: '(15) 3212-9000', distance: 32.1 },
+  { id: 'u5', name: 'Maggi Curitiba', state: 'PR', city: 'Curitiba', brands: ['Volkswagen'], address: 'Av. das Torres, 4500', phone: '(41) 3012-1000', distance: 410.5 },
+  { id: 'u6', name: 'Maggi Londrina', state: 'PR', city: 'Londrina', brands: ['Toyota'], address: 'Av. Tiradentes, 2500', phone: '(43) 3371-2000', distance: 520.0 },
+];
 
 export const MOCK_VEHICLES: Vehicle[] = [
   {
