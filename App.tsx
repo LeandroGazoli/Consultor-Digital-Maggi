@@ -6,53 +6,52 @@ import SpecificationDoc from './components/SpecificationDoc';
 import { MOCK_VEHICLES, UNITS, SERVICES, MOCK_CAMPAIGNS, MOCK_UNITS, BRANDS } from './constants';
 import { 
   Search, MessageCircle, Phone, MapPin, ChevronRight, 
-  Calendar as CalendarIcon, ChevronLeft, Sparkles, Car, 
-  Tag, FileText, CircleDollarSign, Users2, ArrowRight, 
+  Calendar as CalendarIcon, Sparkles, Car, 
+  Tag, CircleDollarSign, Users2, ArrowRight, 
   Heart, Store, Send, Loader2, ExternalLink, CarFront, ShieldCheck, Newspaper,
   History, Award, Zap, Wrench, Target, Eye, Star, Clock, CheckCircle2, Filter, Info,
-  Flame, Gift, PiggyBank, HandCoins, ShieldEllipsis, BadgePercent, Navigation
+  Flame, Gift, PiggyBank, HandCoins, ShieldEllipsis, BadgePercent, Navigation,
+  User, Settings, LogOut, Bell, FileText, Quote, Trophy, Rocket, Briefcase,
+  SearchCode, Fingerprint, Bike, Truck, Tractor, Home as HomeIcon, Landmark, X,
+  Droplets, Activity, Hammer, RefreshCw, AlertCircle, ChevronLeft
 } from 'lucide-react';
 import { getFastVehicleRecommendation, startMaggiChat, getUnitsWithMaps } from './services/geminiService';
+
+type DnaType = 'mission' | 'vision' | 'values' | null;
+type SchedulingStep = 'LIST' | 'DATES' | 'QUESTIONS' | 'SUCCESS';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>(AppView.HOME);
   const [userProfileInput, setUserProfileInput] = useState('');
   const [fastRec, setFastRec] = useState('');
   const [isFastLoading, setIsFastLoading] = useState(false);
-  const [npsValue, setNpsValue] = useState<number | null>(null);
+  const [userNps, setUserNps] = useState<number | null>(null);
+  const [npsSubmitted, setNpsSubmitted] = useState(false);
   
-  // Agendamento State
-  const [selectedDate, setSelectedDate] = useState<number | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [isConfirmed, setIsConfirmed] = useState(false);
-
-  // Estoque State
-  const [selectedStockUnit, setSelectedStockUnit] = useState('Itu');
-  const [stockCategory, setStockCategory] = useState<'ALL' | 'NEW' | 'USED'>('ALL');
-
-  // Ofertas State
-  const [offersCategory, setOffersCategory] = useState<'ALL' | 'SALES' | 'SERVICE'>('ALL');
-
-  // Lojas State
-  const [unitFilterState, setUnitFilterState] = useState('');
-  const [unitFilterCity, setUnitFilterCity] = useState('');
-  const [unitFilterBrand, setUnitFilterBrand] = useState('');
-  const [isFiltering, setIsFiltering] = useState(false);
-
   const [chatMessages, setChatMessages] = useState<{role: 'user'|'model', text: string}[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  
+  const [consortiumGroup, setConsortiumGroup] = useState('');
+  const [consortiumQuota, setConsortiumQuota] = useState('');
+  const [isConsortiumLoading, setIsConsortiumLoading] = useState(false);
+  
+  const [selectedDna, setSelectedDna] = useState<DnaType>(null);
 
-  const [mapsData, setMapsData] = useState<{text: string, links: any[]}>({text: '', links: []});
-  const [isMapsLoading, setIsMapsLoading] = useState(false);
+  // Estados de Agendamento/Serviços/Ofertas
+  const [currentUnit, setCurrentUnit] = useState<Unit>(MOCK_UNITS[0]);
+  const [schedulingStep, setSchedulingStep] = useState<SchedulingStep>('LIST');
+  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [proposedDates, setProposedDates] = useState<string[]>(['', '', '']);
+  const [revQuestionnaire, setRevQuestionnaire] = useState({ plate: '', km: '', obs: '' });
+  const [isChangingUnit, setIsChangingUnit] = useState(false);
+  
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const diffScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (activeView === AppView.UNITS && !mapsData.text) {
-      handleLoadMaps();
-    }
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeView, chatMessages, mapsData]);
+  }, [chatMessages]);
 
   const handleFastAsk = async () => {
     if (!userProfileInput) return;
@@ -63,102 +62,147 @@ const App: React.FC = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!chatInput.trim()) return;
-    const newMessages = [...chatMessages, { role: 'user' as const, text: chatInput }];
+    if (!chatInput.trim() || isChatLoading) return;
+    const userMsg = chatInput.trim();
+    const newMessages = [...chatMessages, { role: 'user' as const, text: userMsg }];
     setChatMessages(newMessages);
     setChatInput('');
     setIsChatLoading(true);
-    const response = await startMaggiChat(newMessages);
-    setChatMessages([...newMessages, { role: 'model' as const, text: response || 'Desculpe, tive um problema.' }]);
-    setIsChatLoading(false);
+    try {
+      const response = await startMaggiChat(newMessages);
+      setChatMessages([...newMessages, { role: 'model' as const, text: response || 'Desculpe, tive um problema.' }]);
+    } catch (e) {
+      setChatMessages([...newMessages, { role: 'model' as const, text: 'Ops! O MaggiBot está descansando. Tente em instantes.' }]);
+    } finally {
+      setIsChatLoading(false);
+    }
   };
 
-  const handleLoadMaps = async () => {
-    setIsMapsLoading(true);
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const data = await getUnitsWithMaps(pos.coords.latitude, pos.coords.longitude);
-      setMapsData(data);
-      setIsMapsLoading(false);
-    }, async () => {
-      const data = await getUnitsWithMaps();
-      setMapsData(data);
-      setIsMapsLoading(false);
-    });
+  const handleConsortiumAccess = () => {
+    if (!consortiumGroup || !consortiumQuota) return;
+    setIsConsortiumLoading(true);
+    setTimeout(() => {
+      setIsConsortiumLoading(false);
+      alert(`Acessando informações da Cota ${consortiumQuota} no Grupo ${consortiumGroup}...`);
+    }, 1500);
   };
 
-  const handleApplyFilters = () => {
-    setIsFiltering(true);
-    setTimeout(() => setIsFiltering(false), 600);
+  const openWhatsApp = (msg: string) => {
+    const url = `https://wa.me/5511999999999?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
   };
 
-  const actions = [
-    { label: 'Revisão', icon: CalendarIcon, color: 'text-[#0071C2]', view: AppView.SCHEDULE },
-    { label: 'Estoque', icon: Car, color: 'text-[#0071C2]', view: AppView.STOCK },
-    { label: 'Veículo', icon: CarFront, color: 'text-[#0071C2]', view: AppView.MY_VEHICLE },
-    { label: 'Ofertas', icon: Tag, color: 'text-[#f89a1e]', view: AppView.OFFERS },
-    { label: 'Financiar', icon: CircleDollarSign, color: 'text-[#0071C2]' },
-    { label: 'Consórcio', icon: Users2, color: 'text-[#0071C2]', view: AppView.CONSORTIUM },
-    { label: 'Lojas', icon: Store, color: 'text-[#0071C2]', view: AppView.UNITS },
-    { label: 'Novidades', icon: Newspaper, color: 'text-[#0071C2]', view: AppView.HOME },
-  ];
+  const handleNpsSubmit = (score: number) => {
+    setUserNps(score);
+    setNpsSubmitted(true);
+    setTimeout(() => setNpsSubmitted(false), 3000);
+  };
 
-  const differentials = [
-    { label: 'Tradição', desc: '+40 anos de história', icon: History },
-    { label: 'Confiança', desc: 'Garantia de procedência', icon: Award },
-    { label: 'Agilidade', desc: 'Crédito aprovado rápido', icon: Zap },
-    { label: 'Qualidade', desc: 'Oficinas especializadas', icon: Wrench },
-  ];
+  const scrollDifferentials = () => {
+    if (diffScrollRef.current) {
+      const container = diffScrollRef.current;
+      const scrollAmount = 180;
+      const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 10;
+      if (isAtEnd) container.scrollTo({ left: 0, behavior: 'smooth' });
+      else container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
-  const institutional = [
-    { title: 'Missão', text: 'Oferecer soluções em mobilidade com excelência, transparência e confiança.', icon: Target },
-    { title: 'Visão', text: 'Ser o maior e mais inovador grupo automotivo, referência em satisfação no Brasil.', icon: Eye },
-    { title: 'Valores', text: 'Ética, Paixão por Carros, Foco no Cliente e Responsabilidade Socioambiental.', icon: Heart },
-  ];
+  const dnaContent = {
+    mission: {
+      title: 'Nossa Missão',
+      icon: Target,
+      text: 'Prover as melhores soluções de mobilidade, superando as expectativas de nossos clientes através de um atendimento de excelência e confiança.'
+    },
+    vision: {
+      title: 'Nossa Visão',
+      icon: Eye,
+      text: 'Ser o grupo de concessionárias mais admirado do Brasil, liderando a transformação do setor automotivo com inovação e sustentabilidade.'
+    },
+    values: {
+      title: 'Nossos Valores',
+      icon: Award,
+      text: 'Ética Absoluta em todos os negócios, Foco total no Cliente, Inovação constante nos processos e valorização da nossa Gente Maggi.'
+    }
+  };
 
-  const timeSlots = ['08:00', '09:30', '10:00', '13:30', '14:00', '15:30', '16:00', '17:00'];
+  const renderDnaModal = () => {
+    if (!selectedDna) return null;
+    const content = dnaContent[selectedDna];
+    const Icon = content.icon;
+
+    return (
+      <div className="fixed inset-0 z-[100] flex items-end justify-center animate-in fade-in duration-300">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedDna(null)} />
+        <div className="relative bg-white w-full max-md rounded-t-[3rem] p-10 shadow-2xl animate-in slide-in-from-bottom-20 duration-500">
+          <button 
+            onClick={() => setSelectedDna(null)}
+            className="absolute top-8 right-8 p-3 bg-gray-50 rounded-full text-gray-400 active:scale-90 transition-transform"
+          >
+            <X size={20} />
+          </button>
+          
+          <div className="space-y-6">
+            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-[#0071C2]">
+              <Icon size={32} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-[#0a1d37] uppercase tracking-tighter mb-4">{content.title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed font-medium italic">"{content.text}"</p>
+            </div>
+            <div className="pt-4">
+              <button 
+                onClick={() => setSelectedDna(null)}
+                className="w-full bg-[#0071C2] text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em]"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderHome = () => (
     <div className="space-y-8 p-6 animate-in fade-in duration-500 pb-20">
-      <div className="relative group mx-0.5">
-        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-        <input 
-          type="text" 
-          placeholder="O que você busca hoje?" 
-          className="w-full pl-14 pr-6 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0071C2]/5 text-sm font-medium transition-all"
+      <div className="flex justify-between items-center px-0.5">
+        <div>
+          <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Bem-vindo à</h2>
+          <h1 className="text-2xl font-black text-[#0a1d37] tracking-tighter">Experiência Maggi</h1>
+        </div>
+      </div>
+
+      <div className="relative h-56 w-full rounded-[2.5rem] overflow-hidden shadow-2xl group cursor-pointer active:scale-[0.98] transition-all" onClick={() => setActiveView(AppView.OFFERS)}>
+        <img 
+          src="https://images.unsplash.com/photo-1617469767053-d3b508a0d182?q=80&w=1200&auto=format&fit=crop" 
+          alt="BYD Dolphin Mini" 
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a1d37]/90 via-[#0a1d37]/20 to-transparent" />
+        <div className="absolute bottom-6 left-6 right-6">
+          <span className="bg-[#f89a1e] text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest mb-2 inline-block shadow-lg">Lançamento</span>
+          <h2 className="text-xl font-black text-white uppercase tracking-tight leading-tight">BYD Dolphin Mini<br/>O Futuro é Agora</h2>
+          <p className="text-white/70 text-[10px] font-medium mt-1">Reserve o seu com bônus de R$ 5.000,00</p>
+        </div>
+        <div className="absolute top-6 right-6 p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white">
+          <Zap size={20} />
+        </div>
       </div>
 
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-2.5">
-          {actions.slice(0, 6).map((action, i) => (
-            <button 
-              key={i}
-              onClick={() => action.view ? setActiveView(action.view) : null}
-              className="flex flex-col items-center justify-center py-6 px-2 bg-white border border-gray-50 rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.015)] hover:border-blue-100 transition-all active:scale-95 group"
-            >
-              <div className={`mb-2 transition-all ${action.color} group-hover:scale-110`}>
-                <action.icon size={22} strokeWidth={1.8} />
-              </div>
-              <span className="text-[8px] font-bold text-gray-400 text-center uppercase tracking-wider leading-none">
-                {action.label}
-              </span>
-            </button>
-          ))}
-        </div>
-        
-        <div className="grid grid-cols-2 gap-2.5">
-          {actions.slice(6, 8).map((action, i) => (
-            <button 
-              key={i}
-              onClick={() => action.view ? setActiveView(action.view) : null}
-              className="flex items-center gap-4 p-5 bg-white border border-gray-50 rounded-2xl shadow-[0_2px_15px_rgba(0,0,0,0.02)] hover:border-blue-100 transition-all active:scale-95 group"
-            >
-              <div className={`transition-all ${action.color} group-hover:scale-110`}>
-                <action.icon size={24} strokeWidth={2} />
-              </div>
-              <span className="text-[10px] font-black text-gray-600 uppercase tracking-[0.15em] leading-none">
-                {action.label}
-              </span>
+          {[
+            { label: 'Serviços', icon: CalendarIcon, color: 'text-[#0071C2]', view: AppView.SCHEDULE },
+            { label: 'Carro Novo', icon: Car, color: 'text-[#0071C2]', view: AppView.STOCK },
+            { label: 'Meu Carro', icon: CarFront, color: 'text-[#0071C2]', view: AppView.MY_VEHICLE },
+            { label: 'Ofertas', icon: Tag, color: 'text-[#f89a1e]', view: AppView.OFFERS },
+            { label: 'Financiar', icon: CircleDollarSign, color: 'text-[#0071C2]', action: () => openWhatsApp("Olá! Gostaria de uma simulação.") },
+            { label: 'Consórcio', icon: Users2, color: 'text-[#0071C2]', view: AppView.CONSORTIUM },
+          ].map((action, i) => (
+            <button key={i} onClick={() => action.view ? setActiveView(action.view) : (action.action ? action.action() : null)} className="flex flex-col items-center justify-center py-6 px-2 bg-white border border-gray-50 rounded-2xl shadow-sm hover:border-blue-100 transition-all active:scale-95 group">
+              <div className={`mb-2 transition-all ${action.color} group-hover:scale-110`}><action.icon size={22} strokeWidth={1.8} /></div>
+              <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">{action.label}</span>
             </button>
           ))}
         </div>
@@ -167,747 +211,532 @@ const App: React.FC = () => {
       <div className="bg-[#0071C2] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden mx-0.5">
         <div className="absolute -top-10 -right-10 opacity-5"><Sparkles size={160} /></div>
         <div className="relative z-10">
-            <h3 className="text-[10px] font-black flex items-center gap-2.5 uppercase tracking-[0.3em]">
-                <Sparkles size={14} className="text-[#f89a1e]" /> Assistente Maggi
-            </h3>
+            <h3 className="text-[10px] font-black flex items-center gap-2.5 uppercase tracking-[0.3em]"><Sparkles size={14} className="text-[#f89a1e]" /> Assistente Maggi</h3>
             <div className="mt-6 flex gap-2.5">
-                <input 
-                  value={userProfileInput}
-                  onChange={(e) => setUserProfileInput(e.target.value)}
-                  placeholder="No que posso ajudar?"
-                  className="flex-1 bg-white/10 border border-white/10 rounded-xl px-6 py-4 text-sm focus:outline-none placeholder:text-blue-100/30"
-                />
+                <input value={userProfileInput} onChange={(e) => setUserProfileInput(e.target.value)} placeholder="No que posso ajudar?" className="flex-1 bg-white/10 border border-white/10 rounded-xl px-6 py-4 text-sm focus:outline-none placeholder:text-blue-100/40" />
                 <button onClick={handleFastAsk} disabled={isFastLoading} className="bg-[#f89a1e] p-4 rounded-xl shadow-lg active:scale-90 transition-transform">
                   {isFastLoading ? <Loader2 className="animate-spin" size={20} /> : <ChevronRight size={20} />}
                 </button>
             </div>
-            {fastRec && (
-                <div className="mt-6 p-5 bg-white/5 rounded-2xl border border-white/5 animate-in slide-in-from-top-2">
-                    <p className="text-xs font-medium leading-relaxed italic opacity-90">"{fastRec}"</p>
-                </div>
-            )}
+            {fastRec && <div className="mt-6 p-5 bg-white/5 rounded-2xl border border-white/5 italic text-xs animate-in slide-in-from-top-2">"{fastRec}"</div>}
         </div>
       </div>
 
       <div className="space-y-4 px-0.5 relative group">
-        <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] pl-1">Por que escolher a Maggi?</h3>
+        <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] pl-1">Por que a Maggi?</h3>
         <div className="relative">
-          <div className="absolute top-0 right-0 bottom-4 w-12 bg-gradient-to-l from-[#fcfdfe] to-transparent z-10 pointer-events-none"></div>
-          <div className="absolute right-1 top-1/2 -translate-y-1/2 z-20 animate-pulse text-[#0071C2]/30 group-hover:text-[#0071C2]/60 transition-colors">
-            <ChevronRight size={18} strokeWidth={3} />
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide snap-x">
-            {differentials.map((diff, i) => (
-              <div 
-                key={i} 
-                className="min-w-[140px] snap-start p-5 bg-white border border-gray-50 rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.01)] flex flex-col gap-3"
-              >
-                <div className="text-[#0071C2]">
-                  <diff.icon size={20} strokeWidth={2} />
-                </div>
+          <button onClick={scrollDifferentials} className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/80 backdrop-blur-sm p-3 rounded-full shadow-lg border border-gray-50 text-[#0071C2] active:scale-90 transition-all hover:bg-white">
+            <ChevronRight size={20} strokeWidth={3} />
+          </button>
+          <div ref={diffScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide snap-x">
+            {[
+              { label: 'Tradição', desc: '+40 anos', icon: History },
+              { label: 'Confiança', desc: 'Garantia real', icon: Award },
+              { label: 'Agilidade', desc: 'Aprovação rápida', icon: Zap },
+              { label: 'Qualidade', desc: 'Oficinas Maggi', icon: Wrench },
+              { label: 'Missão', desc: 'Sua mobilidade', icon: Target },
+            ].map((diff, i) => (
+              <div key={i} className="min-w-[140px] snap-start p-5 bg-white border border-gray-50 rounded-2xl shadow-sm flex flex-col gap-3">
+                <div className="text-[#0071C2]"><diff.icon size={20} /></div>
                 <div>
-                  <p className="text-[10px] font-black text-[#0a1d37] uppercase tracking-tight leading-none mb-1">{diff.label}</p>
-                  <p className="text-[8px] text-gray-400 font-bold uppercase leading-tight tracking-tighter">{diff.desc}</p>
+                  <p className="text-[10px] font-black text-[#0a1d37] uppercase mb-1">{diff.label}</p>
+                  <p className="text-[8px] text-gray-400 font-bold uppercase">{diff.desc}</p>
                 </div>
               </div>
             ))}
-            <div className="min-w-[10px] flex-shrink-0"></div>
           </div>
         </div>
       </div>
 
-      <div className="space-y-5 px-0.5 mt-10">
-        <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] pl-1">Nossa Identidade</h3>
-        <div className="space-y-3">
-          {institutional.map((item, i) => (
-            <div key={i} className="bg-white p-6 rounded-[2rem] border border-gray-50 shadow-[0_2px_15px_rgba(0,0,0,0.01)] flex gap-5 items-start">
-              <div className="p-3 bg-blue-50/50 rounded-2xl text-[#0071C2]">
-                <item.icon size={22} strokeWidth={2} />
-              </div>
-              <div>
-                <h4 className="text-[11px] font-black text-[#0a1d37] uppercase tracking-wider mb-1">{item.title}</h4>
-                <p className="text-[10px] text-gray-500 font-medium leading-relaxed">{item.text}</p>
-              </div>
-            </div>
-          ))}
+      <div className="space-y-4 px-0.5">
+        <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] pl-1">Nosso DNA</h3>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="p-4 bg-white border border-gray-50 rounded-2xl text-center cursor-pointer active:bg-gray-50 transition-colors" onClick={() => setSelectedDna('mission')}>
+            <Target size={18} className="mx-auto mb-2 text-[#0071C2]" />
+            <p className="text-[8px] font-black uppercase text-[#0a1d37]">Missão</p>
+          </div>
+          <div className="p-4 bg-white border border-gray-50 rounded-2xl text-center cursor-pointer active:bg-gray-50 transition-colors" onClick={() => setSelectedDna('vision')}>
+            <Eye size={18} className="mx-auto mb-2 text-[#0071C2]" />
+            <p className="text-[8px] font-black uppercase text-[#0a1d37]">Visão</p>
+          </div>
+          <div className="p-4 bg-white border border-gray-50 rounded-2xl text-center cursor-pointer active:bg-gray-50 transition-colors" onClick={() => setSelectedDna('values')}>
+            <Award size={18} className="mx-auto mb-2 text-[#0071C2]" />
+            <p className="text-[8px] font-black uppercase text-[#0a1d37]">Valores</p>
+          </div>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="mt-12 px-0.5">
-        <div className="bg-gray-50/50 rounded-[2.5rem] p-8 border border-gray-100 text-center">
-          {npsValue === null ? (
-            <>
-              <Star size={24} className="text-[#f89a1e] mx-auto mb-4" />
-              <h3 className="text-[10px] font-black text-[#0a1d37] uppercase tracking-[0.2em] mb-2">Avalie sua experiência</h3>
-              <p className="text-[9px] text-gray-400 font-bold uppercase mb-6">Em uma escala de 0 a 10, o quanto recomendaria o app Maggi?</p>
-              <div className="flex justify-between gap-1 overflow-x-auto pb-2 scrollbar-hide">
-                {[...Array(11).keys()].map((num) => (
+  const renderSchedule = () => {
+    const servicesList = [
+      { name: 'Revisão Periódica', icon: RefreshCw, desc: 'Mantenha sua garantia e segurança' },
+      { name: 'Troca de Óleo', icon: Droplets, desc: 'Lubrificação e filtros em dia' },
+      { name: 'Diagnóstico/Barulho', icon: Activity, desc: 'Identificação técnica de falhas' },
+      { name: 'Recall', icon: AlertCircle, desc: 'Verificações gratuitas de fábrica' },
+      { name: 'Funilaria/Pintura', icon: Hammer, desc: 'Estética e reparos estruturais' },
+    ];
+
+    const handleServiceClick = (service: string) => {
+      setSelectedService(service);
+      if (service === 'Revisão Periódica') {
+        setSchedulingStep('DATES');
+      } else {
+        openWhatsApp(`Olá! Gostaria de agendar ${service} na unidade ${currentUnit.name}.`);
+      }
+    };
+
+    const handleConfirmDates = () => {
+      if (proposedDates.some(d => !d)) return;
+      setSchedulingStep('QUESTIONS');
+    };
+
+    const handleFinalSubmit = () => {
+      if (!revQuestionnaire.plate || !revQuestionnaire.km) return;
+      setSchedulingStep('SUCCESS');
+    };
+
+    const resetFlow = () => {
+      setSchedulingStep('LIST');
+      setSelectedService(null);
+      setProposedDates(['', '', '']);
+      setRevQuestionnaire({ plate: '', km: '', obs: '' });
+    };
+
+    return (
+      <div className="p-8 space-y-8 animate-in fade-in bg-white rounded-t-[3rem] mt-4 min-h-[85vh] pb-32">
+        {schedulingStep === 'LIST' && (
+          <>
+            <div className="text-center space-y-3">
+              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-[#0071C2]">
+                <Wrench size={40} />
+              </div>
+              <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Serviços Maggi</h2>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Excelência em Pós-Venda</p>
+            </div>
+
+            <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-[#0071C2] text-white rounded-xl shadow-md"><Store size={18} /></div>
+                <div>
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loja Selecionada</h4>
+                  <p className="text-sm font-black text-[#0a1d37]">{currentUnit.name}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-[11px] font-black text-[#0a1d37] uppercase tracking-[0.3em] border-l-4 border-[#0071C2] pl-4">Escolha o Serviço</h3>
+              <div className="space-y-3">
+                {servicesList.map((service, i) => (
                   <button 
-                    key={num}
-                    onClick={() => setNpsValue(num)}
-                    className="w-8 h-8 flex-shrink-0 rounded-full bg-white border border-gray-100 text-[10px] font-black text-gray-400 hover:border-[#0071C2] hover:text-[#0071C2] transition-all active:scale-90"
+                    key={i} 
+                    onClick={() => handleServiceClick(service.name)}
+                    className="w-full flex items-center justify-between p-5 bg-white border border-gray-100 rounded-[2rem] shadow-sm active:scale-[0.98] transition-all group hover:border-[#0071C2]/30"
                   >
-                    {num}
+                    <div className="flex items-center gap-4 text-left">
+                      <div className="p-3 bg-gray-50 rounded-xl text-[#0071C2] group-hover:bg-[#0071C2] group-hover:text-white transition-colors">
+                        <service.icon size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-[#0a1d37] uppercase">{service.name}</h4>
+                        <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5">{service.desc}</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} className="text-gray-300" />
                   </button>
                 ))}
               </div>
-            </>
-          ) : (
-            <div className="py-4 animate-in zoom-in-95 duration-300">
-              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <ShieldCheck size={24} className="text-green-500" />
-              </div>
-              <p className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Obrigado pelo seu feedback!</p>
-              <button 
-                onClick={() => setNpsValue(null)} 
-                className="mt-4 text-[8px] font-black text-[#0071C2] uppercase tracking-widest underline opacity-50"
-              >
-                Avaliar novamente
-              </button>
             </div>
-          )}
-        </div>
-      </div>
 
-      <div className="py-10 text-center opacity-20">
-        <p className="text-[8px] font-black uppercase tracking-[0.5em] text-[#0071C2]">Empresas Maggi &copy; 2024</p>
-      </div>
-    </div>
-  );
-
-  const renderSchedule = () => (
-    <div className="p-8 space-y-8 animate-in fade-in h-full bg-white rounded-t-[3rem] mt-4 min-h-[85vh] shadow-sm">
-      <div className="flex justify-between items-center px-2">
-        <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Agendamento</h2>
-        <div className="p-2.5 bg-blue-50 rounded-xl text-[#0071C2]"><CalendarIcon size={28} /></div>
-      </div>
-
-      {!isConfirmed ? (
-        <div className="space-y-8 animate-in slide-in-from-bottom-2">
-          {/* Última Unidade Visitada */}
-          <div className="space-y-4">
-            <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] pl-2">Sua Unidade Habitual</h3>
-            <button className="w-full bg-blue-50/50 p-6 rounded-[2rem] border border-blue-100 flex items-center justify-between group active:scale-[0.98] transition-all">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#0071C2] shadow-sm"><Store size={22} /></div>
-                <div className="text-left">
-                  <p className="text-[12px] font-black text-[#0a1d37] uppercase tracking-tight">Maggi Itu - Matriz</p>
-                  <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Última visita: 12 Out 2023</p>
-                </div>
-              </div>
-              <div className="p-3 bg-white rounded-full text-[#0071C2] shadow-sm group-hover:bg-[#0071C2] group-hover:text-white transition-colors">
-                <ChevronRight size={16} />
-              </div>
+            <button 
+              onClick={() => setIsChangingUnit(true)}
+              className="w-full py-4 text-[10px] font-black text-[#0071C2] uppercase tracking-[0.2em] border border-[#0071C2]/20 rounded-2xl flex items-center justify-center gap-2 active:bg-blue-50 transition-colors"
+            >
+              <RefreshCw size={14} /> Trocar Concessionária Maggi
             </button>
-          </div>
+          </>
+        )}
 
-          {/* Calendário Simplificado */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center px-2">
-              <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em]">Selecione o Dia (Nov)</h3>
-              <p className="text-[8px] font-black text-[#0071C2] uppercase">Ver mais</p>
+        {schedulingStep === 'DATES' && (
+          <div className="space-y-8 animate-in slide-in-from-right duration-300">
+            <div className="flex items-center gap-4">
+              <button onClick={() => setSchedulingStep('LIST')} className="p-2 text-gray-400"><ChevronLeft size={24} /></button>
+              <h3 className="text-lg font-black text-[#0a1d37] uppercase tracking-tighter">Proponha 3 Datas</h3>
             </div>
-            <div className="grid grid-cols-7 gap-2">
-              {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-                <div key={i} className="text-center text-[8px] font-black text-gray-300 uppercase py-2">{d}</div>
+            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest leading-relaxed">Indique três datas preferenciais e nossa equipe confirmará a melhor opção para você.</p>
+            
+            <div className="space-y-4">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="space-y-2">
+                  <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Opção {i + 1}</label>
+                  <input 
+                    type="date" 
+                    value={proposedDates[i]}
+                    onChange={(e) => {
+                      const newDates = [...proposedDates];
+                      newDates[i] = e.target.value;
+                      setProposedDates(newDates);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 font-bold text-[#0a1d37]" 
+                  />
+                </div>
               ))}
-              {[...Array(14).keys()].map((day) => {
-                const dayNum = day + 15; // Mocking Nov 15th onwards
-                const isSelected = selectedDate === dayNum;
-                const isWeekend = (dayNum % 7 === 0 || dayNum % 7 === 1);
-                return (
+            </div>
+
+            <button 
+              onClick={handleConfirmDates}
+              disabled={proposedDates.some(d => !d)}
+              className="w-full bg-[#0071C2] text-white py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all disabled:opacity-30"
+            >
+              Próximo Passo <ArrowRight size={20} className="inline ml-2" />
+            </button>
+          </div>
+        )}
+
+        {schedulingStep === 'QUESTIONS' && (
+          <div className="space-y-8 animate-in slide-in-from-right duration-300">
+            <div className="flex items-center gap-4">
+              <button onClick={() => setSchedulingStep('DATES')} className="p-2 text-gray-400"><ChevronLeft size={24} /></button>
+              <h3 className="text-lg font-black text-[#0a1d37] uppercase tracking-tighter">Sobre o Veículo</h3>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-gray-400 ml-1 tracking-widest">Placa do Carro</label>
+                <input 
+                  type="text" 
+                  placeholder="Ex: ABC-1234"
+                  value={revQuestionnaire.plate}
+                  onChange={(e) => setRevQuestionnaire({...revQuestionnaire, plate: e.target.value.toUpperCase()})}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none font-bold placeholder:text-gray-300"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-gray-400 ml-1 tracking-widest">KM Atual</label>
+                <input 
+                  type="number" 
+                  placeholder="Ex: 25000"
+                  value={revQuestionnaire.km}
+                  onChange={(e) => setRevQuestionnaire({...revQuestionnaire, km: e.target.value})}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none font-bold placeholder:text-gray-300"
+                />
+              </div>
+            </div>
+
+            <button 
+              onClick={handleFinalSubmit}
+              disabled={!revQuestionnaire.plate || !revQuestionnaire.km}
+              className="w-full bg-[#f89a1e] text-white py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all disabled:opacity-30"
+            >
+              Solicitar Agendamento <Rocket size={20} className="inline ml-2" />
+            </button>
+          </div>
+        )}
+
+        {schedulingStep === 'SUCCESS' && (
+          <div className="text-center py-10 space-y-6 animate-in zoom-in duration-500">
+            <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto text-green-500">
+              <CheckCircle2 size={50} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-[#0a1d37] uppercase tracking-tight">Solicitação Enviada!</h3>
+              <p className="text-xs text-gray-400 font-bold uppercase leading-relaxed px-4">Recebemos seu pedido para a unidade {currentUnit.name}. Retornaremos em breve.</p>
+            </div>
+            <button 
+              onClick={resetFlow}
+              className="w-full bg-[#0071C2] text-white py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em]"
+            >
+              Voltar aos Serviços
+            </button>
+          </div>
+        )}
+
+        {isChangingUnit && (
+          <div className="fixed inset-0 z-[110] flex items-end justify-center animate-in fade-in duration-300">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsChangingUnit(false)} />
+            <div className="relative bg-white w-full max-w-md rounded-t-[3rem] p-10 shadow-2xl animate-in slide-in-from-bottom-20 duration-500 max-h-[80vh] overflow-y-auto text-[#0a1d37]">
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="text-lg font-black uppercase tracking-tight">Escolha outra Maggi</h3>
+                <button onClick={() => setIsChangingUnit(false)} className="p-2 text-gray-300"><X size={20} /></button>
+              </div>
+              <div className="space-y-3">
+                {MOCK_UNITS.map(u => (
                   <button 
-                    key={dayNum}
-                    disabled={isWeekend}
-                    onClick={() => setSelectedDate(dayNum)}
-                    className={`h-12 rounded-2xl text-[11px] font-black transition-all flex items-center justify-center border
-                      ${isWeekend ? 'bg-gray-50 border-transparent text-gray-200 cursor-not-allowed' : 
-                        isSelected ? 'bg-[#0071C2] border-[#0071C2] text-white shadow-lg' : 'bg-white border-gray-50 text-gray-700 hover:border-blue-100 shadow-[0_2px_10px_rgba(0,0,0,0.01)]'}
-                    `}
+                    key={u.id}
+                    onClick={() => { setCurrentUnit(u); setIsChangingUnit(false); }}
+                    className={`w-full p-6 rounded-2xl border text-left flex items-center justify-between transition-all ${currentUnit.id === u.id ? 'border-[#0071C2] bg-blue-50/50' : 'border-gray-100 hover:border-blue-100'}`}
                   >
-                    {dayNum}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Horários */}
-          {selectedDate && (
-            <div className="space-y-4 animate-in fade-in zoom-in-95">
-              <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] pl-2">Horários Disponíveis</h3>
-              <div className="grid grid-cols-4 gap-2">
-                {timeSlots.map((time) => {
-                  const isSelected = selectedTime === time;
-                  return (
-                    <button 
-                      key={time}
-                      onClick={() => setSelectedTime(time)}
-                      className={`py-3 rounded-xl text-[9px] font-black transition-all border items-center justify-center gap-1.5 flex
-                        ${isSelected ? 'bg-[#0071C2] border-[#0071C2] text-white' : 'bg-gray-50 border-transparent text-gray-500 hover:bg-white hover:border-blue-100'}
-                      `}
-                    >
-                      <Clock size={10} /> {time}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Botão Confirmar */}
-          <div className="pt-4">
-            <button 
-              disabled={!selectedDate || !selectedTime}
-              onClick={() => setIsConfirmed(true)}
-              className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg transition-all active:scale-95
-                ${!selectedDate || !selectedTime ? 'bg-gray-100 text-gray-300' : 'bg-[#0071C2] text-white shadow-[#0071C2]/20'}
-              `}
-            >
-              Confirmar Agendamento
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center animate-in zoom-in-95">
-          <div className="w-24 h-24 bg-green-50 rounded-[2.5rem] flex items-center justify-center text-green-500 mb-8 shadow-inner">
-            <CheckCircle2 size={48} />
-          </div>
-          <h3 className="text-xl font-black text-[#0a1d37] uppercase tracking-tight mb-4">Agendamento Realizado!</h3>
-          <p className="text-xs text-gray-400 font-medium px-10 leading-relaxed mb-10 italic">
-            Sua revisão para o dia <strong>{selectedDate} de Novembro</strong> às <strong>{selectedTime}</strong> na unidade <strong>Maggi Itu</strong> foi confirmada.
-          </p>
-          <div className="space-y-3 w-full">
-            <button 
-              onClick={() => {setIsConfirmed(false); setActiveView(AppView.HOME);}}
-              className="w-full bg-[#0071C2] text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg"
-            >
-              Voltar ao Início
-            </button>
-            <button className="w-full py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] text-[#0071C2] border border-blue-50">
-              Adicionar ao Calendário
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderStock = () => {
-    const filteredVehicles = MOCK_VEHICLES.filter(v => {
-      const unitMatch = v.unit.toLowerCase().includes(selectedStockUnit.toLowerCase());
-      const categoryMatch = stockCategory === 'ALL' || v.type === stockCategory;
-      return unitMatch && categoryMatch;
-    });
-
-    return (
-      <div className="p-8 space-y-8 animate-in fade-in h-full bg-white rounded-t-[3rem] mt-4 min-h-[85vh] shadow-sm pb-32">
-        <div className="flex justify-between items-center px-2">
-          <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Estoque</h2>
-          <div className="p-2.5 bg-blue-50 rounded-xl text-[#0071C2]"><Car size={28} /></div>
-        </div>
-
-        {/* Seletor de Concessionária */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center px-2">
-            <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em]">Escolher Unidade</h3>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-2">
-            {UNITS.map((unit) => (
-              <button
-                key={unit}
-                onClick={() => setSelectedStockUnit(unit)}
-                className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap border
-                  ${selectedStockUnit === unit ? 'bg-[#0071C2] border-[#0071C2] text-white shadow-lg' : 'bg-white border-gray-100 text-gray-400'}
-                `}
-              >
-                {unit}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Categorias */}
-        <div className="flex bg-gray-100/50 p-1 rounded-2xl">
-          <button 
-            onClick={() => setStockCategory('ALL')}
-            className={`flex-1 py-3 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${stockCategory === 'ALL' ? 'bg-white text-[#0071C2] shadow-sm' : 'text-gray-400'}`}
-          >
-            Todos
-          </button>
-          <button 
-            onClick={() => setStockCategory('NEW')}
-            className={`flex-1 py-3 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${stockCategory === 'NEW' ? 'bg-white text-[#0071C2] shadow-sm' : 'text-gray-400'}`}
-          >
-            Novos (0km)
-          </button>
-          <button 
-            onClick={() => setStockCategory('USED')}
-            className={`flex-1 py-3 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${stockCategory === 'USED' ? 'bg-white text-[#0071C2] shadow-sm' : 'text-gray-400'}`}
-          >
-            Seminovos
-          </button>
-        </div>
-
-        {/* Lista de Veículos */}
-        <div className="space-y-6">
-          {filteredVehicles.length > 0 ? (
-            filteredVehicles.map((vehicle) => (
-              <div key={vehicle.id} className="group animate-in slide-in-from-bottom-2 bg-white rounded-[2.5rem] border border-gray-50 shadow-[0_4px_30px_rgba(0,0,0,0.02)] overflow-hidden transition-all active:scale-[0.98]">
-                <div className="relative h-56 overflow-hidden">
-                  <img src={vehicle.image} alt={vehicle.model} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                  <div className="absolute top-4 left-4 flex gap-2">
-                    <span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-sm ${vehicle.type === 'NEW' ? 'bg-[#0071C2] text-white' : 'bg-[#f89a1e] text-white'}`}>
-                      {vehicle.type === 'NEW' ? '0km' : 'Seminovo'}
-                    </span>
-                  </div>
-                  <button className="absolute bottom-4 right-4 p-3 bg-white/90 backdrop-blur rounded-full text-red-500 shadow-lg active:scale-90 transition-transform">
-                    <Heart size={18} />
-                  </button>
-                </div>
-                <div className="p-8 space-y-4">
-                  <div>
-                    <p className="text-[9px] font-black text-[#0071C2] uppercase tracking-[0.2em] mb-1">{vehicle.brand}</p>
-                    <h3 className="text-xl font-black text-[#0a1d37] leading-tight uppercase tracking-tight">{vehicle.model}</h3>
-                  </div>
-                  
-                  <div className="flex gap-4 border-y border-gray-50 py-4">
-                    <div className="flex items-center gap-1.5">
-                      <Clock size={14} className="text-gray-300" />
-                      <span className="text-[10px] font-bold text-gray-400">{vehicle.year}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 border-l border-gray-100 pl-4">
-                      <MapPin size={14} className="text-gray-300" />
-                      <span className="text-[10px] font-bold text-gray-400">{vehicle.km === 0 ? '0 km' : `${vehicle.km.toLocaleString()} km`}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-end justify-between pt-2">
                     <div>
-                      <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1">A partir de</p>
-                      <p className="text-2xl font-black text-[#0a1d37]">R$ {vehicle.price.toLocaleString('pt-BR')}</p>
+                      <h4 className="text-sm font-black">{u.name}</h4>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{u.city} - {u.state}</p>
                     </div>
-                    <button className="p-4 bg-gray-50 rounded-2xl text-[#0071C2] active:scale-90 transition-transform">
-                      <ArrowRight size={20} />
-                    </button>
-                  </div>
-                </div>
+                    {currentUnit.id === u.id && <CheckCircle2 size={18} className="text-[#0071C2]" />}
+                  </button>
+                ))}
               </div>
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-center opacity-30">
-              <Car size={64} className="mb-4 text-gray-300" strokeWidth={1} />
-              <p className="font-black uppercase text-[10px] tracking-[0.3em]">Nenhum veículo encontrado nesta unidade.</p>
-              <button 
-                onClick={() => setSelectedStockUnit('Itu')}
-                className="mt-4 text-[9px] font-black text-[#0071C2] uppercase underline tracking-widest"
-              >
-                Ver matriz Itu
-              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   };
 
   const renderOffers = () => {
-    const filteredOffers = MOCK_CAMPAIGNS.filter(c => 
-      offersCategory === 'ALL' || c.type === offersCategory
-    );
+    // Algoritmo de Prioridade:
+    // 1. Pós-venda (SERVICE)
+    // 2. Carro Zero (SALES + badge "Novo 0km")
+    // 3. Multimarcas (SALES + outros)
+    const getPriority = (c: Campaign) => {
+      if (c.type === 'SERVICE') return 1;
+      if (c.badge === 'Novo 0km') return 2;
+      return 3;
+    };
+
+    const sortedCampaigns = [...MOCK_CAMPAIGNS].sort((a, b) => getPriority(a) - getPriority(b));
 
     return (
-      <div className="p-8 space-y-8 animate-in fade-in h-full bg-white rounded-t-[3rem] mt-4 min-h-[85vh] shadow-sm pb-32">
-        <div className="flex justify-between items-center px-2">
-          <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Ofertas</h2>
-          <div className="p-2.5 bg-orange-50 rounded-xl text-[#f89a1e]"><Tag size={28} /></div>
+      <div className="p-8 space-y-10 animate-in fade-in bg-white rounded-t-[3rem] mt-4 min-h-[85vh] pb-32">
+        <div className="text-center space-y-3">
+          <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mx-auto text-[#f89a1e]">
+            <Tag size={40} />
+          </div>
+          <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Ofertas Maggi</h2>
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Oportunidades em {currentUnit.name}</p>
         </div>
 
-        {/* Categorias de Oferta */}
-        <div className="flex bg-gray-100/50 p-1 rounded-2xl">
-          <button 
-            onClick={() => setOffersCategory('ALL')}
-            className={`flex-1 py-3 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${offersCategory === 'ALL' ? 'bg-white text-[#f89a1e] shadow-sm' : 'text-gray-400'}`}
-          >
-            Todas
-          </button>
-          <button 
-            onClick={() => setOffersCategory('SALES')}
-            className={`flex-1 py-3 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${offersCategory === 'SALES' ? 'bg-white text-[#f89a1e] shadow-sm' : 'text-gray-400'}`}
-          >
-            Veículos
-          </button>
-          <button 
-            onClick={() => setOffersCategory('SERVICE')}
-            className={`flex-1 py-3 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${offersCategory === 'SERVICE' ? 'bg-white text-[#f89a1e] shadow-sm' : 'text-gray-400'}`}
-          >
-            Pós-Venda
-          </button>
-        </div>
-
-        {/* Lista de Campanhas */}
-        <div className="space-y-8">
-          {filteredOffers.map((camp) => (
-            <div key={camp.id} className="group relative bg-white rounded-[3rem] border border-gray-50 shadow-[0_10px_40px_rgba(0,0,0,0.03)] overflow-hidden animate-in slide-in-from-bottom-3 transition-all active:scale-[0.98]">
-              <div className="relative h-64">
-                <img src={camp.image} alt={camp.title} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                
-                {camp.badge && (
+        <div className="space-y-6">
+          {sortedCampaigns.map((camp, i) => {
+            const isService = camp.type === 'SERVICE';
+            const isZero = camp.badge === 'Novo 0km';
+            
+            return (
+              <div key={camp.id} className="relative group overflow-hidden rounded-[2.5rem] shadow-xl border border-gray-100 animate-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${i * 100}ms` }}>
+                <div className="h-48 overflow-hidden relative">
+                  <img src={camp.image} alt={camp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[2s]" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   <div className="absolute top-6 left-6 flex gap-2">
-                    <span className="bg-[#f89a1e] text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg">
-                      <Flame size={12} /> {camp.badge}
+                    <span className={`px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg ${
+                      isService ? 'bg-blue-600 text-white' : isZero ? 'bg-orange-500 text-white' : 'bg-green-600 text-white'
+                    }`}>
+                      {camp.badge}
                     </span>
                   </div>
-                )}
-
-                <div className="absolute bottom-6 left-8 right-8 text-white">
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-2 opacity-80">Campanha Maggi</p>
-                  <h3 className="text-xl font-black uppercase leading-tight tracking-tight">{camp.title}</h3>
+                  {isService && (
+                    <div className="absolute top-6 right-6 p-2 bg-white/20 backdrop-blur-md rounded-xl text-white">
+                      <Wrench size={16} />
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="p-8 space-y-6">
-                <p className="text-sm text-gray-500 font-medium leading-relaxed italic border-l-2 border-[#f89a1e] pl-4">{camp.subtitle}</p>
                 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <CalendarIcon size={14} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Válido até {camp.validUntil}</span>
+                <div className="p-8 bg-white space-y-4">
+                  <div>
+                    <h3 className="text-lg font-black text-[#0a1d37] uppercase tracking-tight leading-tight">{camp.title}</h3>
+                    <p className="text-xs text-gray-400 font-medium mt-2 leading-relaxed">{camp.subtitle}</p>
                   </div>
-                  <button 
-                    onClick={() => camp.type === 'SERVICE' ? setActiveView(AppView.SCHEDULE) : setActiveView(AppView.CHAT)}
-                    className="bg-[#0071C2] text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg active:scale-95 transition-all"
-                  >
-                    {camp.type === 'SERVICE' ? 'Agendar agora' : 'Tenho interesse'}
-                    <ChevronRight size={14} strokeWidth={3} />
-                  </button>
+                  
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Clock size={12} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Até {camp.validUntil}</span>
+                    </div>
+                    <button 
+                      onClick={() => openWhatsApp(`Olá! Vi a oferta "${camp.title}" e tenho interesse.`)}
+                      className="bg-[#0071C2] text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-transform"
+                    >
+                      Aproveitar
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+        </div>
 
-          {filteredOffers.length === 0 && (
-            <div className="py-24 text-center opacity-30">
-              <Gift size={64} className="mx-auto mb-4" strokeWidth={1} />
-              <p className="font-black uppercase text-[10px] tracking-[0.3em]">Nenhuma oferta disponível no momento.</p>
-            </div>
-          )}
+        <div className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 text-center">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
+            Campanhas exclusivas para clientes da unidade {currentUnit.name}.<br/>Sujeito a disponibilidade de estoque.
+          </p>
         </div>
       </div>
     );
   };
 
   const renderConsortium = () => (
-    <div className="p-8 space-y-8 animate-in fade-in h-full bg-white rounded-t-[3rem] mt-4 min-h-[85vh] shadow-sm pb-32">
-      <div className="flex justify-between items-center px-2">
+    <div className="p-8 space-y-10 animate-in fade-in bg-white rounded-t-[3rem] mt-4 min-h-[85vh] pb-32">
+      <div className="text-center space-y-3">
+        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-[#0071C2]">
+          <PiggyBank size={40} />
+        </div>
         <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Consórcio Maggi</h2>
-        <div className="p-2.5 bg-blue-50 rounded-xl text-[#0071C2]"><Users2 size={28} /></div>
+        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">O Plano Certo para Você</p>
       </div>
 
-      <div className="relative h-48 rounded-[2.5rem] overflow-hidden">
-        <img 
-          src="https://images.unsplash.com/photo-1560520653-9e0e4c89eb11?q=80&w=1200&auto=format&fit=crop" 
-          className="w-full h-full object-cover" 
-          alt="Consórcio"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0071C2]/80 to-transparent flex items-center p-8">
-          <div className="text-white">
-            <h3 className="text-lg font-black uppercase tracking-tight leading-tight mb-2">A forma mais inteligente de conquistar seu bem.</h3>
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">Planejamento e Tradição</p>
+      <div className="bg-[#0071C2] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-10"><Fingerprint size={120} /></div>
+        <div className="relative z-10 space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-sm font-black uppercase tracking-wider">Área do Consorciado</h3>
+            <p className="text-[10px] text-blue-100/60 font-medium uppercase tracking-widest">Acesse seu contrato agora</p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[9px] font-black uppercase tracking-[0.2em] ml-1 opacity-70">Grupo</label>
+              <input 
+                type="text" 
+                value={consortiumGroup}
+                onChange={(e) => setConsortiumGroup(e.target.value)}
+                placeholder="Ex: 0045"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:bg-white/20 transition-all placeholder:text-blue-100/30 font-bold"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[9px] font-black uppercase tracking-[0.2em] ml-1 opacity-70">Cota</label>
+              <input 
+                type="text" 
+                value={consortiumQuota}
+                onChange={(e) => setConsortiumQuota(e.target.value)}
+                placeholder="Ex: 120"
+                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:bg-white/20 transition-all placeholder:text-blue-100/30 font-bold"
+              />
+            </div>
+            <button 
+              onClick={handleConsortiumAccess}
+              disabled={isConsortiumLoading || !consortiumGroup || !consortiumQuota}
+              className="w-full bg-[#f89a1e] text-white py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+            >
+              {isConsortiumLoading ? <Loader2 className="animate-spin" size={18} /> : <>Consultar Minha Cota <ChevronRight size={16} /></>}
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] pl-2">Vantagens Maggi</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 flex flex-col gap-3">
-            <div className="text-[#f89a1e]"><BadgePercent size={24} /></div>
-            <div>
-              <p className="text-[10px] font-black text-[#0a1d37] uppercase tracking-tight mb-1">Sem Juros</p>
-              <p className="text-[8px] text-gray-400 font-bold uppercase leading-tight tracking-tighter">Taxas administrativas competitivas.</p>
+      <div className="space-y-6">
+        <h3 className="text-[11px] font-black text-[#0a1d37] uppercase tracking-[0.3em] border-l-4 border-[#0071C2] pl-4">Setores que Atendemos</h3>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { icon: Car, label: 'Carros' },
+            { icon: Bike, label: 'Motos' },
+            { icon: Truck, label: 'Caminhões' },
+            { icon: Tractor, label: 'Maquinário' }, 
+            { icon: HomeIcon, label: 'Casa/Imóvel' },
+            { icon: Landmark, label: 'Serviços' },
+          ].map((item, i) => (
+            <div key={i} className="flex flex-col items-center justify-center p-5 bg-gray-50 border border-gray-100 rounded-[2rem] text-center gap-2 group hover:bg-white hover:border-blue-200 transition-all shadow-sm">
+              <div className="text-[#0071C2] group-hover:scale-110 transition-transform"><item.icon size={24} /></div>
+              <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">{item.label}</span>
             </div>
-          </div>
-          <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 flex flex-col gap-3">
-            <div className="text-[#0071C2]"><ShieldEllipsis size={24} /></div>
-            <div>
-              <p className="text-[10px] font-black text-[#0a1d37] uppercase tracking-tight mb-1">Garantia</p>
-              <p className="text-[8px] text-gray-400 font-bold uppercase leading-tight tracking-tighter">Grupo consolidado no mercado.</p>
-            </div>
-          </div>
-          <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 flex flex-col gap-3">
-            <div className="text-[#0071C2]"><PiggyBank size={24} /></div>
-            <div>
-              <p className="text-[10px] font-black text-[#0a1d37] uppercase tracking-tight mb-1">Flexível</p>
-              <p className="text-[8px] text-gray-400 font-bold uppercase leading-tight tracking-tighter">Prazos que cabem no seu bolso.</p>
-            </div>
-          </div>
-          <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 flex flex-col gap-3">
-            <div className="text-[#0071C2]"><HandCoins size={24} /></div>
-            <div>
-              <p className="text-[10px] font-black text-[#0a1d37] uppercase tracking-tight mb-1">Poder de Compra</p>
-              <p className="text-[8px] text-gray-400 font-bold uppercase leading-tight tracking-tighter">Carta de crédito com valor de à vista.</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      <div className="bg-blue-50/50 p-8 rounded-[2.5rem] border border-blue-100 text-center space-y-4">
-        <h4 className="text-[11px] font-black text-[#0071C2] uppercase tracking-[0.2em]">Pronto para realizar seu sonho?</h4>
-        <p className="text-[10px] text-gray-500 font-medium leading-relaxed italic px-4">
-          Nossos especialistas estão prontos para criar um plano personalizado para você.
-        </p>
+      <div className="pt-4">
         <button 
-          onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Vim pelo app Maggi e gostaria de simular uma cota de consórcio.', '_blank')}
-          className="w-full bg-[#f89a1e] text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg shadow-orange-200 flex items-center justify-center gap-3 active:scale-95 transition-all"
+          onClick={() => openWhatsApp("Olá! Quero fazer uma simulação de consórcio.")}
+          className="w-full bg-[#0071C2] text-white py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
         >
-          <MessageCircle size={18} />
-          Quero simular minha cota
-        </button>
-      </div>
-
-      <div className="flex items-center gap-4 p-6 border border-gray-100 rounded-[2rem] opacity-50">
-        <Info size={20} className="text-gray-400" />
-        <p className="text-[8px] font-bold text-gray-400 uppercase leading-relaxed tracking-wider">
-          O Consórcio Maggi é administrado por entidades autorizadas pelo Banco Central do Brasil.
-        </p>
-      </div>
-    </div>
-  );
-
-  const renderMyVehicle = () => (
-    <div className="p-8 space-y-8 animate-in fade-in h-full bg-white rounded-t-[3rem] mt-4 min-h-[85vh] shadow-sm">
-      <div className="flex justify-between items-center px-2">
-        <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Meu Veículo</h2>
-        <div className="p-2.5 bg-blue-50 rounded-xl text-[#0071C2]"><CarFront size={28} /></div>
-      </div>
-      <div className="bg-gray-50/40 p-10 rounded-[2.5rem] border border-gray-100 flex flex-col items-center text-center">
-        <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-sm mb-8 border border-gray-50">
-          <ShieldCheck size={40} className="text-[#0071C2]" />
-        </div>
-        <h3 className="text-xl font-black text-[#0a1d37] uppercase mb-3 leading-tight">Histórico de Revisão</h3>
-        <p className="text-xs text-gray-400 font-medium mb-10 leading-relaxed px-6 italic">Cadastre seu veículo para gerenciar revisões e garantir o valor de revenda.</p>
-        <button className="w-full bg-[#0071C2] text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg active:scale-95 transition-all">
-          Adicionar Veículo
+          Faça sua Simulação <Rocket size={20} />
         </button>
       </div>
     </div>
   );
 
-  const renderChat = () => (
-    <div className="flex flex-col h-full bg-white rounded-t-[3rem] mt-4 shadow-sm overflow-hidden">
-      <div className="p-8 border-b border-gray-50 flex justify-between items-center">
-        <h2 className="text-xl font-black text-[#0a1d37] uppercase tracking-tighter">MaggiBot AI</h2>
-        <div className="flex gap-1.5 items-center">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <Sparkles className="text-[#0071C2]" size={20} />
+  const renderProfile = () => (
+    <div className="p-8 space-y-10 animate-in fade-in bg-white rounded-t-[3rem] mt-4 min-h-[85vh] pb-32">
+      <div className="flex items-center gap-6">
+        <div className="w-20 h-20 bg-[#0071C2] rounded-3xl flex items-center justify-center text-white text-2xl font-black shadow-lg">JD</div>
+        <div>
+          <h2 className="text-xl font-black text-[#0a1d37] uppercase tracking-tight">João da Silva</h2>
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Cliente Maggi desde 2018</p>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-8 space-y-6">
-        {chatMessages.length === 0 && (
-          <div className="text-center py-20 opacity-30">
-            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <MessageCircle size={32} className="text-gray-300" />
+
+      <div className="space-y-6">
+        <h3 className="text-[11px] font-black text-[#0071C2] uppercase tracking-[0.3em] border-l-4 border-[#0071C2] pl-4">Institucional</h3>
+        <div className="space-y-4">
+          <button onClick={() => setSelectedDna('mission')} className="w-full text-left p-6 bg-gray-50 rounded-[2rem] border border-gray-100 shadow-sm active:scale-[0.98] transition-all">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="p-3 bg-white rounded-xl text-[#0071C2] shadow-sm"><Rocket size={20} /></div>
+              <h4 className="text-sm font-black text-[#0a1d37] uppercase tracking-wider">Nossa Missão</h4>
             </div>
-            <p className="font-black text-lg uppercase tracking-widest">Consultor Online</p>
-            <p className="text-[9px] font-bold mt-2 uppercase">Como podemos ajudar hoje?</p>
+            <p className="text-xs text-gray-500 leading-relaxed font-medium italic">"Prover as melhores soluções de mobilidade..."</p>
+          </button>
+          <button onClick={() => setSelectedDna('vision')} className="w-full text-left p-6 bg-gray-50 rounded-[2rem] border border-gray-100 shadow-sm active:scale-[0.98] transition-all">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="p-3 bg-white rounded-xl text-[#0071C2] shadow-sm"><Eye size={20} /></div>
+              <h4 className="text-sm font-black text-[#0a1d37] uppercase tracking-wider">Nossa Visão</h4>
+            </div>
+            <p className="text-xs text-gray-500 leading-relaxed font-medium italic">"Ser o grupo de concessionárias mais admirado do Brasil..."</p>
+          </button>
+          <div className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="p-3 bg-white rounded-xl text-[#0071C2] shadow-sm"><Briefcase size={20} /></div>
+              <h4 className="text-sm font-black text-[#0a1d37] uppercase tracking-wider">Nossos Valores</h4>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {['Ética Absoluta', 'Foco no Cliente', 'Inovação', 'Gente Maggi'].map(v => (
+                <div key={v} onClick={() => setSelectedDna('values')} className="bg-white px-4 py-2 rounded-xl text-[9px] font-black text-[#0a1d37] border border-gray-100 uppercase text-center shadow-sm cursor-pointer">{v}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button className="w-full flex items-center justify-between p-6 bg-red-50 text-red-500 rounded-3xl font-black uppercase text-[10px] tracking-widest mt-12 active:scale-95 transition-transform">
+        Sair da Conta <LogOut size={18} />
+      </button>
+    </div>
+  );
+
+  const renderMaggiBot = () => (
+    <div className="flex flex-col h-full bg-white animate-in slide-in-from-right duration-300">
+      <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+        <div>
+          <h2 className="text-lg font-black text-[#0a1d37] uppercase tracking-tighter flex items-center gap-2">MaggiBot 3.0 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /></h2>
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Seu concierge inteligente</p>
+        </div>
+        <div className="p-3 bg-blue-50 rounded-2xl text-[#0071C2]"><Sparkles size={20} /></div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/30">
+        {chatMessages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-40 py-20">
+            <div className="p-6 bg-white rounded-full shadow-sm"><MessageCircle size={40} className="text-[#0071C2]" /></div>
+            <p className="text-xs font-medium max-w-[200px]">Olá! Sou o MaggiBot. No que posso te ajudar hoje?</p>
           </div>
         )}
-        {chatMessages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] p-5 rounded-2xl text-sm leading-relaxed ${
-              m.role === 'user' ? 'bg-[#0071C2] text-white rounded-tr-none shadow-sm' : 'bg-gray-100 text-gray-800 rounded-tl-none border border-gray-50'
-            }`}>
-              {m.text}
-            </div>
+        {chatMessages.map((msg, idx) => (
+          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-1`}>
+            <div className={`max-w-[85%] p-4 rounded-[1.5rem] text-sm shadow-sm ${msg.role === 'user' ? 'bg-[#0071C2] text-white rounded-tr-none' : 'bg-white border border-gray-100 text-[#0a1d37] rounded-tl-none'}`}>{msg.text}</div>
           </div>
         ))}
         {isChatLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 p-5 rounded-2xl rounded-tl-none"><Loader2 className="animate-spin text-[#0071C2]" size={18} /></div>
+          <div className="flex justify-start animate-pulse">
+            <div className="bg-white border border-gray-100 p-4 rounded-[1.5rem] rounded-tl-none shadow-sm"><Loader2 className="animate-spin text-[#0071C2]" size={16} /></div>
           </div>
         )}
         <div ref={chatEndRef} />
       </div>
-      <div className="p-6 border-t border-gray-50 bg-white">
-        <div className="flex gap-3">
-          <input 
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Digite sua dúvida..."
-            className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-6 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-[#0071C2]/10"
-          />
-          <button onClick={handleSendMessage} className="bg-[#0071C2] text-white p-4 rounded-xl shadow-lg active:scale-90 transition-transform">
-            <Send size={20} />
-          </button>
+      <div className="p-6 bg-white border-t border-gray-100 pb-24">
+        <div className="flex gap-3 bg-gray-50 border border-gray-100 rounded-2xl p-2 pl-6">
+          <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} placeholder="Pergunte sobre carros..." className="flex-1 bg-transparent border-none focus:outline-none text-sm py-3 font-medium" />
+          <button onClick={handleSendMessage} disabled={isChatLoading || !chatInput.trim()} className="bg-[#0071C2] text-white p-4 rounded-xl shadow-lg active:scale-90 transition-transform disabled:opacity-30"><Send size={18} /></button>
         </div>
       </div>
     </div>
   );
 
-  const renderUnits = () => {
-    // Lógica de Filtro
-    const states = Array.from(new Set(MOCK_UNITS.map(u => u.state)));
-    const cities = Array.from(new Set(MOCK_UNITS.filter(u => !unitFilterState || u.state === unitFilterState).map(u => u.city)));
-
-    const filteredUnits = MOCK_UNITS
-      .filter(u => {
-        const stateMatch = !unitFilterState || u.state === unitFilterState;
-        const cityMatch = !unitFilterCity || u.city === unitFilterCity;
-        const brandMatch = !unitFilterBrand || u.brands.includes(unitFilterBrand);
-        return stateMatch && cityMatch && brandMatch;
-      })
-      .sort((a, b) => (a.distance || 0) - (b.distance || 0));
-
-    return (
-      <div className="p-8 space-y-8 animate-in fade-in h-full bg-white rounded-t-[3rem] shadow-sm mt-4 min-h-[85vh] pb-32">
-          {/* Header Section - More Clean */}
-          <div className="flex justify-between items-baseline px-2 border-b border-gray-50 pb-4">
-              <h2 className="text-xl font-medium text-gray-700 tracking-tight">Lojas Maggi</h2>
-              <span className="text-[10px] font-bold text-[#0071C2] uppercase tracking-[0.2em] opacity-40">Proximidade</span>
-          </div>
-
-          {/* Filtros Section - Improved Readability */}
-          <div className="space-y-6 px-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 pl-1">Estado</label>
-                <select 
-                  value={unitFilterState}
-                  onChange={(e) => {setUnitFilterState(e.target.value); setUnitFilterCity('');}}
-                  className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[11px] font-bold text-gray-600 focus:ring-2 focus:ring-blue-100 focus:outline-none appearance-none cursor-pointer w-full transition-all"
-                >
-                  <option value="">Todos Estados</option>
-                  {states.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 pl-1">Cidade</label>
-                <select 
-                  value={unitFilterCity}
-                  onChange={(e) => setUnitFilterCity(e.target.value)}
-                  className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[11px] font-bold text-gray-600 focus:ring-2 focus:ring-blue-100 focus:outline-none appearance-none cursor-pointer w-full transition-all"
-                >
-                  <option value="">Todas Cidades</option>
-                  {cities.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] font-black uppercase tracking-widest text-gray-400 pl-1">Marca / Bandeira</label>
-                <select 
-                  value={unitFilterBrand}
-                  onChange={(e) => setUnitFilterBrand(e.target.value)}
-                  className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[11px] font-bold text-gray-600 focus:ring-2 focus:ring-blue-100 focus:outline-none appearance-none cursor-pointer w-full transition-all"
-                >
-                  <option value="">Todas as Marcas</option>
-                  {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
-            </div>
-
-            {/* Action Button - The "Bring Units" trigger */}
-            <button 
-              onClick={handleApplyFilters}
-              className="w-full bg-[#0071C2] hover:bg-[#005fa3] text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-blue-100 flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
-            >
-              {isFiltering ? <Loader2 className="animate-spin" size={16} /> : <Search size={16} />}
-              Buscar Unidades
-            </button>
-          </div>
-
-          {isMapsLoading ? (
-            <div className="flex flex-col items-center py-24 gap-6 opacity-30">
-              <Loader2 className="animate-spin" size={48} />
-              <p className="font-black uppercase text-[10px] tracking-[0.3em]">Buscando unidades...</p>
-            </div>
-          ) : (
-            <div className={`space-y-6 transition-all duration-500 ${isFiltering ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}>
-              {mapsData.text && (
-                <div className="p-6 bg-blue-50/30 rounded-2xl border border-blue-50 text-xs leading-relaxed text-gray-500 italic">
-                  <div className="flex items-start gap-3">
-                    <Sparkles size={16} className="text-[#0071C2] mt-0.5" />
-                    <p>{mapsData.text}</p>
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-4">
-                {filteredUnits.map((unit) => (
-                    <div key={unit.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-[0_4px_25px_rgba(0,0,0,0.02)] transition-all active:scale-[0.98]">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-[#0071C2] font-black text-xl">{unit.name.charAt(6)}</div>
-                                <div>
-                                    <p className="text-sm font-black text-[#0a1d37] uppercase tracking-tight">{unit.name}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <span className="text-[8px] text-green-500 font-bold uppercase tracking-widest">Aberto agora</span>
-                                      {unit.distance && (
-                                        <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                                          • <Navigation size={8} /> {unit.distance} km
-                                        </span>
-                                      )}
-                                    </div>
-                                </div>
-                            </div>
-                            <button onClick={() => window.open(`tel:${unit.phone}`)} className="p-4 bg-gray-50 rounded-xl text-[#0071C2] active:scale-90 transition-transform"><Phone size={18} /></button>
-                        </div>
-                        
-                        <div className="space-y-3 mb-6">
-                          <div className="flex items-center gap-2 text-gray-400">
-                            <MapPin size={12} className="opacity-40" />
-                            <p className="text-[10px] font-medium leading-tight">{unit.address}, {unit.city} - {unit.state}</p>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {unit.brands.map(brand => (
-                              <span key={brand} className="px-3 py-1 bg-gray-50 rounded-full text-[8px] font-bold text-gray-400 uppercase tracking-wider border border-gray-100">{brand}</span>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <button 
-                            onClick={() => setActiveView(AppView.SCHEDULE)}
-                            className="py-4 bg-[#0071C2] text-white rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
-                          >
-                            <CalendarIcon size={12} /> Agendar
-                          </button>
-                          <button className="py-4 border border-gray-100 text-gray-400 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
-                            <ExternalLink size={12} /> Rota
-                          </button>
-                        </div>
-                    </div>
-                ))}
-                
-                {filteredUnits.length === 0 && (
-                   <div className="py-20 text-center opacity-30">
-                    <Store size={64} className="mx-auto mb-4" strokeWidth={1} />
-                    <p className="font-black uppercase text-[10px] tracking-[0.3em]">Nenhuma unidade encontrada.</p>
-                    <button onClick={() => {setUnitFilterState(''); setUnitFilterCity(''); setUnitFilterBrand('');}} className="mt-4 text-[9px] font-black text-[#0071C2] uppercase underline">Limpar Filtros</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-      </div>
-    );
-  };
-
   const renderContent = () => {
     switch (activeView) {
       case AppView.HOME: return renderHome();
-      case AppView.CHAT: return renderChat();
-      case AppView.MY_VEHICLE: return renderMyVehicle();
-      case AppView.UNITS: return renderUnits();
-      case AppView.SCHEDULE: return renderSchedule();
-      case AppView.STOCK: return renderStock();
+      case AppView.CHAT: return renderMaggiBot();
+      case AppView.MY_VEHICLE: return <div className="p-8"><h2 className="text-2xl font-black uppercase text-[#0a1d37]">Meu Veículo</h2></div>; 
+      case AppView.UNITS: return <div className="p-8"><h2 className="text-2xl font-black uppercase text-[#0a1d37]">Nossas Lojas</h2></div>;
+      case AppView.PROFILE: return renderProfile();
+      case AppView.STOCK: return <div className="p-8"><h2 className="text-2xl font-black uppercase text-[#0a1d37]">Carro Novo Maggi</h2></div>;
       case AppView.OFFERS: return renderOffers();
+      case AppView.SCHEDULE: return renderSchedule();
       case AppView.CONSORTIUM: return renderConsortium();
-      case AppView.PROFILE: return <div className="p-24 text-center font-black opacity-10 text-[10px] tracking-[0.4em] uppercase">Área do Cliente</div>;
-      case AppView.SPEC: return <SpecificationDoc />;
       default: return renderHome();
     }
   };
@@ -915,6 +744,7 @@ const App: React.FC = () => {
   return (
     <Layout activeView={activeView} setActiveView={setActiveView}>
       {renderContent()}
+      {renderDnaModal()}
     </Layout>
   );
 };

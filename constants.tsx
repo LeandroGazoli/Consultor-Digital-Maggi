@@ -43,19 +43,6 @@ export const MOCK_VEHICLES: Vehicle[] = [
     transmission: 'Automático',
     fuel: 'Flex',
     unit: 'Indaiatuba'
-  },
-  {
-    id: '3',
-    brand: 'BYD',
-    model: 'Dolphin Mini',
-    year: '2024/2025',
-    km: 0,
-    price: 115800,
-    image: 'https://images.unsplash.com/photo-1711110058913-912f232f38cc?q=80&w=800&auto=format&fit=crop',
-    type: 'NEW',
-    transmission: 'Automático',
-    fuel: 'Elétrico',
-    unit: 'Itu - Shopping'
   }
 ];
 
@@ -63,16 +50,16 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
   {
     id: 'c1',
     title: 'Festival de Seminovos Maggi',
-    subtitle: 'Taxas reduzidas de 0,99% a.m. e primeira parcela para 90 dias.',
+    subtitle: 'Taxas reduzidas de 0,99% a.m. para multimarcas.',
     image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=1200&auto=format&fit=crop',
     validUntil: '30/11/2024',
     type: 'SALES',
-    badge: 'Oportunidade'
+    badge: 'Multimarcas'
   },
   {
     id: 'c2',
-    title: 'Revisão Maggi Toyota',
-    subtitle: 'Mantenha sua garantia com parcelas em até 10x sem juros no cartão.',
+    title: 'Revisão Maggi Especial',
+    subtitle: 'Mantenha sua garantia em até 10x sem juros no cartão.',
     image: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=1200&auto=format&fit=crop',
     validUntil: '15/12/2024',
     type: 'SERVICE',
@@ -81,7 +68,7 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
   {
     id: 'c3',
     title: 'BYD Dolphin Mini: Oferta Zero',
-    subtitle: 'Bônus de R$ 5.000,00 na troca do seu usado por um 100% elétrico.',
+    subtitle: 'Bônus de R$ 5.000,00 na troca do seu usado por um 0km.',
     image: 'https://images.unsplash.com/photo-1619767886558-efdc259cde1a?q=80&w=1200&auto=format&fit=crop',
     validUntil: '20/11/2024',
     type: 'SALES',
@@ -89,12 +76,21 @@ export const MOCK_CAMPAIGNS: Campaign[] = [
   },
   {
     id: 'c4',
-    title: 'Check-up de Verão Maggi',
-    subtitle: 'Higienização do ar-condicionado + 25 itens inspecionados grátis.',
+    title: 'Check-up de Verão Grátis',
+    subtitle: 'Higienização + 25 itens inspecionados grátis.',
     image: 'https://images.unsplash.com/photo-1562621371-1d90467ae68d?q=80&w=1200&auto=format&fit=crop',
     validUntil: '31/12/2024',
     type: 'SERVICE',
-    badge: 'Segurança'
+    badge: 'Pós-Venda'
+  },
+  {
+    id: 'c5',
+    title: 'Oferta Exclusiva Itu Matriz',
+    subtitle: 'Condição especial apenas na unidade Matriz.',
+    image: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=1200&auto=format&fit=crop',
+    validUntil: '25/11/2024',
+    type: 'SALES',
+    badge: 'Novo 0km'
   }
 ];
 

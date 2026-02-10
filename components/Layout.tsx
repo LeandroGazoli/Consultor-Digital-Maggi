@@ -12,7 +12,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeView, setActiveView }) => {
   const navItems = [
     { id: AppView.HOME, icon: Home, label: 'Início' },
-    { id: AppView.SCHEDULE, icon: Calendar, label: 'Revisão' },
+    { id: AppView.SCHEDULE, icon: Calendar, label: 'Serviços' },
     { id: AppView.CHAT, icon: MessageSquare, label: 'Chat' },
     { id: AppView.PROFILE, icon: User, label: 'Perfil' },
   ];

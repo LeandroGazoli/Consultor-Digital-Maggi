@@ -1,60 +1,55 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Maggi App - Spec & Prototype</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #ffffff;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maggi App - Spec & Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+          font-family: 'Inter', sans-serif; 
+          background-color: #ffffff;
+        }
+        
+        /* Custom Scrollbar - Minimalista "no branco" */
+        ::-webkit-scrollbar {
+          width: 4px;
+          height: 4px;
+        }
+        
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+          background: #f1f1f1;
+          border-radius: 10px;
+          transition: background 0.3s ease;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+          background: #e5e5e5;
+        }
 
-    /* Custom Scrollbar - Minimalista "no branco" */
-    ::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
+        /* Utilitário para esconder scrollbar mantendo funcionalidade */
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
 
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #f1f1f1;
-      border-radius: 10px;
-      transition: background 0.3s ease;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #e5e5e5;
-    }
-
-    /* Utilitário para esconder scrollbar mantendo funcionalidade */
-    .scrollbar-hide::-webkit-scrollbar {
-      display: none;
-    }
-
-    .scrollbar-hide {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-
-    .safe-area-bottom {
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-
-    /* Suavização de scroll */
-    html {
-      scroll-behavior: smooth;
-    }
-  </style>
-  <script type="importmap">
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* Suavização de scroll */
+        html {
+          scroll-behavior: smooth;
+        }
+    </style>
+<script type="importmap">
 {
   "imports": {
     "react/": "https://esm.sh/react@^19.2.4/",
@@ -66,10 +61,7 @@
 }
 </script>
 </head>
-
 <body class="bg-white overflow-x-hidden">
-  <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
+    <div id="root"></div>
 </body>
-
 </html>
