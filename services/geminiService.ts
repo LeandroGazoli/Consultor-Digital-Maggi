@@ -1,15 +1,18 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Modelo 1: Fast AI responses (gemini-2.5-flash-lite)
+// Modelo 1: Fast AI responses (gemini-flash-lite-latest)
 export async function getFastVehicleRecommendation(userProfile: string) {
+  // Always initialize with named parameter apiKey.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite-latest',
+      // Use 'gemini-flash-lite-latest' as specified in model guidelines.
+      model: 'gemini-flash-lite-latest',
       contents: `Você é o concierge rápido da Maggi. O cliente disse: "${userProfile}". 
       Dê uma dica ultra rápida (1 frase) sobre um carro ou serviço Maggi.`,
     });
+    // Access .text property directly.
     return response.text || "Como posso ajudar com seu novo Maggi?";
   } catch (error) {
     return "Consulte nossas ofertas exclusivas!";
@@ -27,6 +30,7 @@ export async function startMaggiChat(history: {role: 'user'|'model', text: strin
   });
   
   const lastMessage = history[history.length - 1].text;
+  // chat.sendMessage returns a response object; access .text.
   const response = await chat.sendMessage({ message: lastMessage });
   return response.text;
 }
@@ -35,7 +39,8 @@ export async function startMaggiChat(history: {role: 'user'|'model', text: strin
 export async function getUnitsWithMaps(lat?: number, lng?: number) {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-latest',
+    // Use 'gemini-2.5-flash' for maps grounding as it requires 2.5 series.
+    model: 'gemini-2.5-flash',
     contents: "Onde ficam as concessionárias Maggi mais próximas e quais são seus horários?",
     config: {
       tools: [{ googleMaps: {} }],
@@ -47,6 +52,7 @@ export async function getUnitsWithMaps(lat?: number, lng?: number) {
     },
   });
   
+  // Extracting text and grounding metadata from response.
   const text = response.text;
   const links = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
   return { text, links };

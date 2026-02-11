@@ -3,14 +3,12 @@ export enum AppView {
   HOME = 'home',
   SCHEDULE = 'schedule',
   STOCK = 'stock',
-  FAVORITES = 'favorites',
+  MY_VEHICLE = 'my_vehicle',
+  INSURANCE = 'insurance',
+  CONSORTIUM = 'consortium',
   UNITS = 'units',
   PROFILE = 'profile',
-  SPEC = 'spec',
-  CHAT = 'chat',
-  MY_VEHICLE = 'my_vehicle',
-  OFFERS = 'offers',
-  CONSORTIUM = 'consortium'
+  CHAT = 'chat'
 }
 
 export interface Unit {
@@ -21,7 +19,7 @@ export interface Unit {
   brands: string[];
   address: string;
   phone: string;
-  distance?: number; // em km
+  distance?: number;
 }
 
 export interface Vehicle {
@@ -38,22 +36,10 @@ export interface Vehicle {
   unit: string;
 }
 
-export interface Campaign {
+export interface ServiceHistory {
   id: string;
-  title: string;
-  subtitle: string;
-  image: string;
-  validUntil: string;
-  type: 'SALES' | 'SERVICE';
-  badge?: string;
-}
-
-export interface Appointment {
-  id: string;
-  unit: string;
-  brand: string;
-  service: string;
   date: string;
-  time: string;
-  vehiclePlate?: string;
+  description: string;
+  unit: string;
+  price: number;
 }

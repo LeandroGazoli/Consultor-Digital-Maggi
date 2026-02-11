@@ -1,5 +1,5 @@
 
-import { Vehicle, Campaign, Unit } from './types';
+import { Vehicle, Unit } from './types';
 
 export const COLORS = {
   primary: '#1473e6', // Azul Maggi
@@ -13,8 +13,6 @@ export const MOCK_UNITS: Unit[] = [
   { id: 'u2', name: 'Maggi Indaiatuba', state: 'SP', city: 'Indaiatuba', brands: ['Volkswagen', 'BYD'], address: 'Av. Visconde de Indaiatuba, 500', phone: '(19) 3801-8000', distance: 15.2 },
   { id: 'u3', name: 'Maggi Salto', state: 'SP', city: 'Salto', brands: ['Toyota'], address: 'Rua Nove de Julho, 120', phone: '(11) 4602-7000', distance: 8.7 },
   { id: 'u4', name: 'Maggi Sorocaba', state: 'SP', city: 'Sorocaba', brands: ['Volkswagen', 'Jeep'], address: 'Av. Dom Aguirre, 2000', phone: '(15) 3212-9000', distance: 32.1 },
-  { id: 'u5', name: 'Maggi Curitiba', state: 'PR', city: 'Curitiba', brands: ['Volkswagen'], address: 'Av. das Torres, 4500', phone: '(41) 3012-1000', distance: 410.5 },
-  { id: 'u6', name: 'Maggi Londrina', state: 'PR', city: 'Londrina', brands: ['Toyota'], address: 'Av. Tiradentes, 2500', phone: '(43) 3371-2000', distance: 520.0 },
 ];
 
 export const MOCK_VEHICLES: Vehicle[] = [
@@ -29,71 +27,84 @@ export const MOCK_VEHICLES: Vehicle[] = [
     type: 'NEW',
     transmission: 'Automático',
     fuel: 'Flex',
-    unit: 'Itu - Matriz'
+    unit: 'Maggi Itu Matriz'
   },
   {
     id: '2',
     brand: 'Toyota',
     model: 'Corolla Cross XRE',
-    year: '2022/2023',
-    km: 24500,
-    price: 158900,
+    year: '2024/2025',
+    km: 0,
+    price: 182900,
     image: 'https://images.unsplash.com/photo-1625231334168-35067f8853ed?q=80&w=800&auto=format&fit=crop',
+    type: 'NEW',
+    transmission: 'Automático',
+    fuel: 'Híbrido',
+    unit: 'Maggi Indaiatuba'
+  },
+  {
+    id: '4',
+    brand: 'Volkswagen',
+    model: 'T-Cross Comfortline',
+    year: '2021/2021',
+    km: 42000,
+    price: 112900,
+    image: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?q=80&w=800&auto=format&fit=crop',
     type: 'USED',
     transmission: 'Automático',
     fuel: 'Flex',
-    unit: 'Indaiatuba'
-  }
+    unit: 'Maggi Salto'
+  },
 ];
 
-export const MOCK_CAMPAIGNS: Campaign[] = [
+export const MOCK_CAMPAIGNS = [
   {
     id: 'c1',
-    title: 'Festival de Seminovos Maggi',
-    subtitle: 'Taxas reduzidas de 0,99% a.m. para multimarcas.',
-    image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=1200&auto=format&fit=crop',
-    validUntil: '30/11/2024',
-    type: 'SALES',
-    badge: 'Multimarcas'
+    title: 'Festival de Seminovos',
+    subtitle: 'Taxas a partir de 0% em 24x',
+    image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=800&auto=format&fit=crop',
+    cta: 'Ver Ofertas'
   },
   {
     id: 'c2',
-    title: 'Revisão Maggi Especial',
-    subtitle: 'Mantenha sua garantia em até 10x sem juros no cartão.',
-    image: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=1200&auto=format&fit=crop',
-    validUntil: '15/12/2024',
-    type: 'SERVICE',
-    badge: 'Pós-Venda'
+    title: 'Revisão Premiada',
+    subtitle: 'Ganhe 10% de desconto em peças',
+    image: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=800&auto=format&fit=crop',
+    cta: 'Agendar'
   },
   {
     id: 'c3',
-    title: 'BYD Dolphin Mini: Oferta Zero',
-    subtitle: 'Bônus de R$ 5.000,00 na troca do seu usado por um 0km.',
-    image: 'https://images.unsplash.com/photo-1619767886558-efdc259cde1a?q=80&w=1200&auto=format&fit=crop',
-    validUntil: '20/11/2024',
-    type: 'SALES',
-    badge: 'Novo 0km'
-  },
-  {
-    id: 'c4',
-    title: 'Check-up de Verão Grátis',
-    subtitle: 'Higienização + 25 itens inspecionados grátis.',
-    image: 'https://images.unsplash.com/photo-1562621371-1d90467ae68d?q=80&w=1200&auto=format&fit=crop',
-    validUntil: '31/12/2024',
-    type: 'SERVICE',
-    badge: 'Pós-Venda'
-  },
-  {
-    id: 'c5',
-    title: 'Oferta Exclusiva Itu Matriz',
-    subtitle: 'Condição especial apenas na unidade Matriz.',
-    image: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=1200&auto=format&fit=crop',
-    validUntil: '25/11/2024',
-    type: 'SALES',
-    badge: 'Novo 0km'
+    title: 'Novo BYD King',
+    subtitle: 'O híbrido que mudou o mercado',
+    image: 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800&auto=format&fit=crop',
+    cta: 'Conhecer'
   }
 ];
 
-export const BRANDS = ['Fiat', 'Volkswagen', 'Toyota', 'BYD', 'Jeep', 'Peugeot', 'Citroën'];
-export const UNITS = ['Itu', 'Indaiatuba', 'Salto', 'Porto Feliz', 'Sorocaba'];
-export const SERVICES = ['Revisão Periódica', 'Troca de Óleo', 'Diagnóstico/Barulho', 'Recall', 'Funilaria/Pintura'];
+export const SERVICE_OPTIONS = [
+  { id: 'oil', label: 'Troca de Óleo', icon: 'droplet', description: 'Lubrificantes originais e filtros novos.' },
+  { id: 'tire', label: 'Pneu', icon: 'disc', description: 'Troca, alinhamento e balanceamento.' },
+  { id: 'revision', label: 'Revisão', icon: 'clipboard-list', description: 'Revisão periódica por quilometragem.' },
+  { id: 'trip', label: 'Check-up Pré-Viagem', icon: 'map-pin', description: 'Segurança total para sua família na estrada.' }
+];
+
+export const INSURANCE_CATEGORIES = [
+  { id: 'auto', label: 'Automóveis', icon: 'car', description: 'Proteção completa para seu veículo.' },
+  { id: 'home', label: 'Residencial', icon: 'home', description: 'Segurança para sua casa e família.' },
+  { id: 'life', label: 'Vida', icon: 'heart', description: 'Cuidado para quem você mais ama.' },
+  { id: 'business', label: 'Empresarial', icon: 'briefcase', description: 'Proteja o futuro do seu negócio.' },
+  { id: 'agro', label: 'Agrícola', icon: 'tractor', description: 'Seguro rural para sua produção.' },
+  { id: 'equip', label: 'Equipamentos', icon: 'wrench', description: 'Proteção para máquinas e ferramentas.' }
+];
+
+export const DNA = {
+  mission: "Prover as melhores soluções de mobilidade, superando as expectativas de nossos clientes através de um atendimento de excelência e confiança.",
+  vision: "Ser o grupo de concessionárias mais admirado do Brasil, liderando a transformação do setor automotivo com inovação e sustentabilidade.",
+  values: "Ética Absoluta em todos os negócios, Foco total no Cliente, Inovação constante nos processos e valorização da nossa Gente Maggi."
+};
+
+export const DIFFERENTIALS = [
+  { title: 'Segurança Garantida', desc: 'Todos os veículos passam por rigorosa perícia cautelar e revisão mecânica completa.', icon: 'shield' },
+  { title: 'Tradição Maggi', desc: 'Mais de 40 anos de história entregando confiança e os melhores negócios do mercado.', icon: 'award' },
+  { title: 'Pós-Venda Premium', desc: 'Assistência técnica especializada com peças originais e profissionais certificados pelas montadoras.', icon: 'check' }
+];

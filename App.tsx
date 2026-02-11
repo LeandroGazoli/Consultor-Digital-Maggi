@@ -1,90 +1,49 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AppView, Vehicle, Appointment, Campaign, Unit } from './types';
+import { AppView, Vehicle, Unit } from './types';
 import Layout from './components/Layout';
-import SpecificationDoc from './components/SpecificationDoc';
-import { MOCK_VEHICLES, UNITS, SERVICES, MOCK_CAMPAIGNS, MOCK_UNITS, BRANDS } from './constants';
+import { MOCK_VEHICLES, MOCK_UNITS, COLORS, DNA, DIFFERENTIALS, SERVICE_OPTIONS, INSURANCE_CATEGORIES, MOCK_CAMPAIGNS } from './constants';
 import { 
-  Search, MessageCircle, Phone, MapPin, ChevronRight, 
-  Calendar as CalendarIcon, Sparkles, Car, 
-  Tag, CircleDollarSign, Users2, ArrowRight, 
-  Heart, Store, Send, Loader2, ExternalLink, CarFront, ShieldCheck, Newspaper,
-  History, Award, Zap, Wrench, Target, Eye, Star, Clock, CheckCircle2, Filter, Info,
-  Flame, Gift, PiggyBank, HandCoins, ShieldEllipsis, BadgePercent, Navigation,
-  User, Settings, LogOut, Bell, FileText, Quote, Trophy, Rocket, Briefcase,
-  SearchCode, Fingerprint, Bike, Truck, Tractor, Home as HomeIcon, Landmark, X,
-  Droplets, Activity, Hammer, RefreshCw, AlertCircle, ChevronLeft
+  Search, MapPin, ChevronRight, Sparkles, Car, 
+  Wrench, Target, Eye, Award, CheckCircle2, 
+  X, Send, Loader2, User, LogOut, MessageSquareHeart,
+  ShieldCheck, PieChart, History, FileText,
+  Tractor, Bike, Truck, Home as HomeIcon, Shield,
+  Droplet, Disc, ClipboardList, Heart, Briefcase, Calendar as CalendarIcon,
+  Calculator
 } from 'lucide-react';
-import { getFastVehicleRecommendation, startMaggiChat, getUnitsWithMaps } from './services/geminiService';
-
-type DnaType = 'mission' | 'vision' | 'values' | null;
-type SchedulingStep = 'LIST' | 'DATES' | 'QUESTIONS' | 'SUCCESS';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>(AppView.HOME);
-  const [userProfileInput, setUserProfileInput] = useState('');
-  const [fastRec, setFastRec] = useState('');
-  const [isFastLoading, setIsFastLoading] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState<string>(MOCK_UNITS[0].name);
+  const [stockTab, setStockTab] = useState<'NEW' | 'USED'>('NEW');
+  const [currentBanner, setCurrentBanner] = useState(0);
+
+  // Estados do NPS
   const [userNps, setUserNps] = useState<number | null>(null);
-  const [npsSubmitted, setNpsSubmitted] = useState(false);
-  
-  const [chatMessages, setChatMessages] = useState<{role: 'user'|'model', text: string}[]>([]);
-  const [chatInput, setChatInput] = useState('');
-  const [isChatLoading, setIsChatLoading] = useState(false);
-  
-  const [consortiumGroup, setConsortiumGroup] = useState('');
-  const [consortiumQuota, setConsortiumQuota] = useState('');
-  const [isConsortiumLoading, setIsConsortiumLoading] = useState(false);
-  
-  const [selectedDna, setSelectedDna] = useState<DnaType>(null);
+  const [npsFeedback, setNpsFeedback] = useState('');
+  const [npsStep, setNpsStep] = useState<'RATING' | 'FEEDBACK' | 'SUCCESS'>('RATING');
+  const [showNpsBanner, setShowNpsBanner] = useState(true);
 
-  // Estados de Agendamento/Serviços/Ofertas
-  const [currentUnit, setCurrentUnit] = useState<Unit>(MOCK_UNITS[0]);
-  const [schedulingStep, setSchedulingStep] = useState<SchedulingStep>('LIST');
-  const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [proposedDates, setProposedDates] = useState<string[]>(['', '', '']);
-  const [revQuestionnaire, setRevQuestionnaire] = useState({ plate: '', km: '', obs: '' });
-  const [isChangingUnit, setIsChangingUnit] = useState(false);
-  
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const diffScrollRef = useRef<HTMLDivElement>(null);
-
+  // Efeito para o banner rotativo
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
-
-  const handleFastAsk = async () => {
-    if (!userProfileInput) return;
-    setIsFastLoading(true);
-    const rec = await getFastVehicleRecommendation(userProfileInput);
-    setFastRec(rec);
-    setIsFastLoading(false);
-  };
-
-  const handleSendMessage = async () => {
-    if (!chatInput.trim() || isChatLoading) return;
-    const userMsg = chatInput.trim();
-    const newMessages = [...chatMessages, { role: 'user' as const, text: userMsg }];
-    setChatMessages(newMessages);
-    setChatInput('');
-    setIsChatLoading(true);
-    try {
-      const response = await startMaggiChat(newMessages);
-      setChatMessages([...newMessages, { role: 'model' as const, text: response || 'Desculpe, tive um problema.' }]);
-    } catch (e) {
-      setChatMessages([...newMessages, { role: 'model' as const, text: 'Ops! O MaggiBot está descansando. Tente em instantes.' }]);
-    } finally {
-      setIsChatLoading(false);
+    if (activeView === AppView.HOME) {
+      const timer = setInterval(() => {
+        setCurrentBanner((prev) => (prev + 1) % MOCK_CAMPAIGNS.length);
+      }, 5000);
+      return () => clearInterval(timer);
     }
-  };
+  }, [activeView]);
 
-  const handleConsortiumAccess = () => {
-    if (!consortiumGroup || !consortiumQuota) return;
-    setIsConsortiumLoading(true);
-    setTimeout(() => {
-      setIsConsortiumLoading(false);
-      alert(`Acessando informações da Cota ${consortiumQuota} no Grupo ${consortiumGroup}...`);
-    }, 1500);
+  const isFeedbackMandatory = userNps !== null && userNps <= 4;
+  const isFeedbackRequired = userNps !== null && userNps >= 5 && userNps <= 7;
+
+  const handleNpsSubmit = () => {
+    if ((isFeedbackMandatory || isFeedbackRequired) && !npsFeedback.trim()) {
+      alert("Por favor, descreva o motivo de sua nota para que possamos melhorar.");
+      return;
+    }
+    setNpsStep('SUCCESS');
   };
 
   const openWhatsApp = (msg: string) => {
@@ -92,636 +51,458 @@ const App: React.FC = () => {
     window.open(url, '_blank');
   };
 
-  const handleNpsSubmit = (score: number) => {
-    setUserNps(score);
-    setNpsSubmitted(true);
-    setTimeout(() => setNpsSubmitted(false), 3000);
-  };
-
-  const scrollDifferentials = () => {
-    if (diffScrollRef.current) {
-      const container = diffScrollRef.current;
-      const scrollAmount = 180;
-      const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 10;
-      if (isAtEnd) container.scrollTo({ left: 0, behavior: 'smooth' });
-      else container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
-
-  const dnaContent = {
-    mission: {
-      title: 'Nossa Missão',
-      icon: Target,
-      text: 'Prover as melhores soluções de mobilidade, superando as expectativas de nossos clientes através de um atendimento de excelência e confiança.'
-    },
-    vision: {
-      title: 'Nossa Visão',
-      icon: Eye,
-      text: 'Ser o grupo de concessionárias mais admirado do Brasil, liderando a transformação do setor automotivo com inovação e sustentabilidade.'
-    },
-    values: {
-      title: 'Nossos Valores',
-      icon: Award,
-      text: 'Ética Absoluta em todos os negócios, Foco total no Cliente, Inovação constante nos processos e valorização da nossa Gente Maggi.'
-    }
-  };
-
-  const renderDnaModal = () => {
-    if (!selectedDna) return null;
-    const content = dnaContent[selectedDna];
-    const Icon = content.icon;
-
-    return (
-      <div className="fixed inset-0 z-[100] flex items-end justify-center animate-in fade-in duration-300">
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedDna(null)} />
-        <div className="relative bg-white w-full max-md rounded-t-[3rem] p-10 shadow-2xl animate-in slide-in-from-bottom-20 duration-500">
-          <button 
-            onClick={() => setSelectedDna(null)}
-            className="absolute top-8 right-8 p-3 bg-gray-50 rounded-full text-gray-400 active:scale-90 transition-transform"
+  const renderHome = () => (
+    <div className="space-y-8 animate-in fade-in pb-32">
+      {/* Banner Rotativo (Campanhas) */}
+      <div className="relative h-64 w-full overflow-hidden">
+        {MOCK_CAMPAIGNS.map((camp, idx) => (
+          <div 
+            key={camp.id}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === currentBanner ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
           >
-            <X size={20} />
-          </button>
-          
-          <div className="space-y-6">
-            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-[#0071C2]">
-              <Icon size={32} />
-            </div>
-            <div>
-              <h3 className="text-xl font-black text-[#0a1d37] uppercase tracking-tighter mb-4">{content.title}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed font-medium italic">"{content.text}"</p>
-            </div>
-            <div className="pt-4">
-              <button 
-                onClick={() => setSelectedDna(null)}
-                className="w-full bg-[#0071C2] text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em]"
-              >
-                Entendido
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10" />
+            <img src={camp.image} alt={camp.title} className="w-full h-full object-cover" />
+            <div className="absolute bottom-10 left-8 z-20 space-y-2 max-w-[80%]">
+              <span className="bg-[#1473e6] text-white text-[9px] font-black uppercase px-2 py-1 rounded-md tracking-widest">Campanha Ativa</span>
+              <h2 className="text-2xl font-black text-white uppercase leading-tight">{camp.title}</h2>
+              <p className="text-white/80 text-xs font-medium">{camp.subtitle}</p>
+              <button className="mt-2 bg-white text-[#1473e6] px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all">
+                {camp.cta}
               </button>
             </div>
           </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderHome = () => (
-    <div className="space-y-8 p-6 animate-in fade-in duration-500 pb-20">
-      <div className="flex justify-between items-center px-0.5">
-        <div>
-          <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Bem-vindo à</h2>
-          <h1 className="text-2xl font-black text-[#0a1d37] tracking-tighter">Experiência Maggi</h1>
-        </div>
-      </div>
-
-      <div className="relative h-56 w-full rounded-[2.5rem] overflow-hidden shadow-2xl group cursor-pointer active:scale-[0.98] transition-all" onClick={() => setActiveView(AppView.OFFERS)}>
-        <img 
-          src="https://images.unsplash.com/photo-1617469767053-d3b508a0d182?q=80&w=1200&auto=format&fit=crop" 
-          alt="BYD Dolphin Mini" 
-          className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a1d37]/90 via-[#0a1d37]/20 to-transparent" />
-        <div className="absolute bottom-6 left-6 right-6">
-          <span className="bg-[#f89a1e] text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest mb-2 inline-block shadow-lg">Lançamento</span>
-          <h2 className="text-xl font-black text-white uppercase tracking-tight leading-tight">BYD Dolphin Mini<br/>O Futuro é Agora</h2>
-          <p className="text-white/70 text-[10px] font-medium mt-1">Reserve o seu com bônus de R$ 5.000,00</p>
-        </div>
-        <div className="absolute top-6 right-6 p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white">
-          <Zap size={20} />
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-2.5">
-          {[
-            { label: 'Serviços', icon: CalendarIcon, color: 'text-[#0071C2]', view: AppView.SCHEDULE },
-            { label: 'Carro Novo', icon: Car, color: 'text-[#0071C2]', view: AppView.STOCK },
-            { label: 'Meu Carro', icon: CarFront, color: 'text-[#0071C2]', view: AppView.MY_VEHICLE },
-            { label: 'Ofertas', icon: Tag, color: 'text-[#f89a1e]', view: AppView.OFFERS },
-            { label: 'Financiar', icon: CircleDollarSign, color: 'text-[#0071C2]', action: () => openWhatsApp("Olá! Gostaria de uma simulação.") },
-            { label: 'Consórcio', icon: Users2, color: 'text-[#0071C2]', view: AppView.CONSORTIUM },
-          ].map((action, i) => (
-            <button key={i} onClick={() => action.view ? setActiveView(action.view) : (action.action ? action.action() : null)} className="flex flex-col items-center justify-center py-6 px-2 bg-white border border-gray-50 rounded-2xl shadow-sm hover:border-blue-100 transition-all active:scale-95 group">
-              <div className={`mb-2 transition-all ${action.color} group-hover:scale-110`}><action.icon size={22} strokeWidth={1.8} /></div>
-              <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">{action.label}</span>
-            </button>
+        ))}
+        {/* Indicadores do Banner */}
+        <div className="absolute bottom-4 left-0 right-0 z-30 flex justify-center gap-1.5">
+          {MOCK_CAMPAIGNS.map((_, idx) => (
+            <button 
+              key={idx}
+              onClick={() => setCurrentBanner(idx)}
+              className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentBanner ? 'w-8 bg-white' : 'w-1.5 bg-white/40'}`}
+            />
           ))}
         </div>
       </div>
 
-      <div className="bg-[#0071C2] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden mx-0.5">
-        <div className="absolute -top-10 -right-10 opacity-5"><Sparkles size={160} /></div>
-        <div className="relative z-10">
-            <h3 className="text-[10px] font-black flex items-center gap-2.5 uppercase tracking-[0.3em]"><Sparkles size={14} className="text-[#f89a1e]" /> Assistente Maggi</h3>
-            <div className="mt-6 flex gap-2.5">
-                <input value={userProfileInput} onChange={(e) => setUserProfileInput(e.target.value)} placeholder="No que posso ajudar?" className="flex-1 bg-white/10 border border-white/10 rounded-xl px-6 py-4 text-sm focus:outline-none placeholder:text-blue-100/40" />
-                <button onClick={handleFastAsk} disabled={isFastLoading} className="bg-[#f89a1e] p-4 rounded-xl shadow-lg active:scale-90 transition-transform">
-                  {isFastLoading ? <Loader2 className="animate-spin" size={20} /> : <ChevronRight size={20} />}
-                </button>
-            </div>
-            {fastRec && <div className="mt-6 p-5 bg-white/5 rounded-2xl border border-white/5 italic text-xs animate-in slide-in-from-top-2">"{fastRec}"</div>}
+      <div className="px-6 space-y-8">
+        {/* 1. Botões de Ação Principal */}
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: 'Serviços', icon: Wrench, view: AppView.SCHEDULE, color: 'text-blue-600' },
+            { label: 'Carro Novo', icon: Car, view: AppView.STOCK, color: 'text-blue-600' },
+            { label: 'Meu Carro', icon: History, view: AppView.MY_VEHICLE, color: 'text-blue-600' },
+            { label: 'Seguros', icon: ShieldCheck, view: AppView.INSURANCE, color: 'text-blue-600' },
+            { label: 'Consórcio', icon: PieChart, view: AppView.CONSORTIUM, color: 'text-blue-600' },
+            { label: 'Lojas', icon: MapPin, view: AppView.UNITS, color: 'text-blue-600' },
+          ].map((btn, i) => (
+            <button 
+              key={i} 
+              onClick={() => setActiveView(btn.view)}
+              className="flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-3xl shadow-sm active:scale-95 transition-all"
+            >
+              <div className={`p-3 bg-blue-50 rounded-2xl ${btn.color}`}>
+                <btn.icon size={22} />
+              </div>
+              <span className="text-xs font-black uppercase text-gray-900 tracking-tight">{btn.label}</span>
+            </button>
+          ))}
         </div>
-      </div>
 
-      <div className="space-y-4 px-0.5 relative group">
-        <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] pl-1">Por que a Maggi?</h3>
-        <div className="relative">
-          <button onClick={scrollDifferentials} className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/80 backdrop-blur-sm p-3 rounded-full shadow-lg border border-gray-50 text-[#0071C2] active:scale-90 transition-all hover:bg-white">
-            <ChevronRight size={20} strokeWidth={3} />
-          </button>
-          <div ref={diffScrollRef} className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide snap-x">
-            {[
-              { label: 'Tradição', desc: '+40 anos', icon: History },
-              { label: 'Confiança', desc: 'Garantia real', icon: Award },
-              { label: 'Agilidade', desc: 'Aprovação rápida', icon: Zap },
-              { label: 'Qualidade', desc: 'Oficinas Maggi', icon: Wrench },
-              { label: 'Missão', desc: 'Sua mobilidade', icon: Target },
-            ].map((diff, i) => (
-              <div key={i} className="min-w-[140px] snap-start p-5 bg-white border border-gray-50 rounded-2xl shadow-sm flex flex-col gap-3">
-                <div className="text-[#0071C2]"><diff.icon size={20} /></div>
-                <div>
-                  <p className="text-[10px] font-black text-[#0a1d37] uppercase mb-1">{diff.label}</p>
-                  <p className="text-[8px] text-gray-400 font-bold uppercase">{diff.desc}</p>
+        {/* 2. Diferenciais Empresas Maggi */}
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Diferenciais Empresas Maggi</h3>
+          <div className="space-y-3">
+            {DIFFERENTIALS.map((diff, i) => (
+              <div key={i} className="flex items-start gap-4 p-5 bg-white border border-gray-50 rounded-3xl">
+                <div className="p-3 bg-blue-50/50 rounded-2xl text-[#1473e6]">
+                  {diff.icon === 'shield' ? <Shield size={20} /> : diff.icon === 'award' ? <Award size={20} /> : <CheckCircle2 size={20} />}
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black uppercase text-gray-900">{diff.title}</h4>
+                  <p className="text-[10px] text-gray-500 font-medium leading-relaxed">{diff.desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
 
-      <div className="space-y-4 px-0.5">
-        <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-[0.25em] pl-1">Nosso DNA</h3>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="p-4 bg-white border border-gray-50 rounded-2xl text-center cursor-pointer active:bg-gray-50 transition-colors" onClick={() => setSelectedDna('mission')}>
-            <Target size={18} className="mx-auto mb-2 text-[#0071C2]" />
-            <p className="text-[8px] font-black uppercase text-[#0a1d37]">Missão</p>
-          </div>
-          <div className="p-4 bg-white border border-gray-50 rounded-2xl text-center cursor-pointer active:bg-gray-50 transition-colors" onClick={() => setSelectedDna('vision')}>
-            <Eye size={18} className="mx-auto mb-2 text-[#0071C2]" />
-            <p className="text-[8px] font-black uppercase text-[#0a1d37]">Visão</p>
-          </div>
-          <div className="p-4 bg-white border border-gray-50 rounded-2xl text-center cursor-pointer active:bg-gray-50 transition-colors" onClick={() => setSelectedDna('values')}>
-            <Award size={18} className="mx-auto mb-2 text-[#0071C2]" />
-            <p className="text-[8px] font-black uppercase text-[#0a1d37]">Valores</p>
+        {/* 3. DNA Institucional */}
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Nosso DNA</h3>
+          <div className="space-y-3">
+            <div className="p-6 bg-blue-50/30 rounded-3xl border border-blue-100/50 space-y-3">
+              <div className="flex items-center gap-2 text-[#1473e6]">
+                <Target size={18} />
+                <h4 className="text-[10px] font-black uppercase">Missão</h4>
+              </div>
+              <p className="text-[11px] text-gray-600 leading-relaxed font-medium italic">"{DNA.mission}"</p>
+            </div>
+            <div className="p-6 bg-blue-50/30 rounded-3xl border border-blue-100/50 space-y-3">
+              <div className="flex items-center gap-2 text-[#1473e6]">
+                <Eye size={18} />
+                <h4 className="text-[10px] font-black uppercase">Visão</h4>
+              </div>
+              <p className="text-[11px] text-gray-600 leading-relaxed font-medium italic">"{DNA.vision}"</p>
+            </div>
+            <div className="p-6 bg-blue-50/30 rounded-3xl border border-blue-100/50 space-y-3">
+              <div className="flex items-center gap-2 text-[#1473e6]">
+                <Award size={18} />
+                <h4 className="text-[10px] font-black uppercase">Valores</h4>
+              </div>
+              <p className="text-[11px] text-gray-600 leading-relaxed font-medium italic">"{DNA.values}"</p>
+            </div>
           </div>
         </div>
+
+        {/* 4. NPS Condicional */}
+        {showNpsBanner && (
+          <div className="p-8 bg-white border-2 border-blue-50 rounded-[2.5rem] shadow-xl space-y-6">
+            {npsStep === 'RATING' && (
+              <>
+                <div className="text-center space-y-2">
+                  <MessageSquareHeart size={32} className="text-[#f89a1e] mx-auto" />
+                  <h3 className="text-sm font-black uppercase text-gray-900">Sua opinião é fundamental</h3>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase">Recomendaria as Empresas Maggi?</p>
+                </div>
+                <div className="grid grid-cols-6 gap-2">
+                  {[0, 2, 4, 6, 8, 10].map((score) => (
+                    <button
+                      key={score}
+                      onClick={() => { setUserNps(score); setNpsStep('FEEDBACK'); }}
+                      className={`py-4 rounded-2xl text-xs font-black transition-all active:scale-90 ${
+                        score <= 4 ? 'bg-red-50 text-red-500' : score <= 7 ? 'bg-orange-50 text-orange-500' : 'bg-green-50 text-green-600'
+                      }`}
+                    >
+                      {score}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {npsStep === 'FEEDBACK' && (
+              <div className="space-y-4 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[10px] font-black uppercase text-gray-900">Nota {userNps} selecionada</h3>
+                  <button onClick={() => setNpsStep('RATING')} className="text-[8px] font-bold text-blue-600 uppercase underline">Alterar</button>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold uppercase text-gray-400">
+                    {userNps! >= 8 ? "Deseja deixar um elogio?" : "O que motivou sua nota? (Obrigatório)"}
+                  </label>
+                  <textarea 
+                    value={npsFeedback}
+                    onChange={(e) => setNpsFeedback(e.target.value)}
+                    placeholder="Seu comentário aqui..."
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-xs focus:outline-none min-h-[100px]"
+                  />
+                </div>
+
+                <button 
+                  onClick={handleNpsSubmit}
+                  className="w-full bg-[#1473e6] text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest"
+                >
+                  Enviar Avaliação
+                </button>
+              </div>
+            )}
+
+            {npsStep === 'SUCCESS' && (
+              <div className="text-center py-6 space-y-4 animate-in zoom-in-95">
+                <CheckCircle2 size={40} className="text-green-500 mx-auto" />
+                <div>
+                  <h3 className="text-sm font-black uppercase text-gray-900">Obrigado!</h3>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase">Sua avaliação ajuda as Empresas Maggi a crescerem.</p>
+                </div>
+                <button onClick={() => setShowNpsBanner(false)} className="text-[9px] font-black text-blue-600 uppercase">Fechar</button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 
-  const renderSchedule = () => {
-    const servicesList = [
-      { name: 'Revisão Periódica', icon: RefreshCw, desc: 'Mantenha sua garantia e segurança' },
-      { name: 'Troca de Óleo', icon: Droplets, desc: 'Lubrificação e filtros em dia' },
-      { name: 'Diagnóstico/Barulho', icon: Activity, desc: 'Identificação técnica de falhas' },
-      { name: 'Recall', icon: AlertCircle, desc: 'Verificações gratuitas de fábrica' },
-      { name: 'Funilaria/Pintura', icon: Hammer, desc: 'Estética e reparos estruturais' },
-    ];
+  const renderStock = () => (
+    <div className="p-6 space-y-6 animate-in fade-in pb-24">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase text-gray-400 pl-1">Selecione sua Cidade / Unidade</label>
+          <div className="relative">
+            <select 
+              value={selectedUnit}
+              onChange={(e) => setSelectedUnit(e.target.value)}
+              className="w-full bg-white border border-gray-100 rounded-2xl p-4 text-xs font-bold appearance-none shadow-sm focus:outline-none"
+            >
+              {MOCK_UNITS.map(u => <option key={u.id} value={u.name}>{u.city} - {u.name}</option>)}
+            </select>
+            <MapPin size={16} className="absolute right-4 top-4 text-gray-300 pointer-events-none" />
+          </div>
+        </div>
 
-    const handleServiceClick = (service: string) => {
-      setSelectedService(service);
-      if (service === 'Revisão Periódica') {
-        setSchedulingStep('DATES');
-      } else {
-        openWhatsApp(`Olá! Gostaria de agendar ${service} na unidade ${currentUnit.name}.`);
-      }
-    };
+        <div className="flex bg-gray-100 p-1 rounded-2xl">
+          <button onClick={() => setStockTab('NEW')} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${stockTab === 'NEW' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>Estoque 0Km</button>
+          <button onClick={() => setStockTab('USED')} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${stockTab === 'USED' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>Seminovos</button>
+        </div>
+      </div>
 
-    const handleConfirmDates = () => {
-      if (proposedDates.some(d => !d)) return;
-      setSchedulingStep('QUESTIONS');
-    };
-
-    const handleFinalSubmit = () => {
-      if (!revQuestionnaire.plate || !revQuestionnaire.km) return;
-      setSchedulingStep('SUCCESS');
-    };
-
-    const resetFlow = () => {
-      setSchedulingStep('LIST');
-      setSelectedService(null);
-      setProposedDates(['', '', '']);
-      setRevQuestionnaire({ plate: '', km: '', obs: '' });
-    };
-
-    return (
-      <div className="p-8 space-y-8 animate-in fade-in bg-white rounded-t-[3rem] mt-4 min-h-[85vh] pb-32">
-        {schedulingStep === 'LIST' && (
-          <>
-            <div className="text-center space-y-3">
-              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-[#0071C2]">
-                <Wrench size={40} />
+      <div className="grid grid-cols-1 gap-4">
+        {MOCK_VEHICLES.filter(v => v.type === stockTab).map((v) => (
+          <div key={v.id} className="bg-white border border-gray-100 rounded-[2.5rem] overflow-hidden shadow-sm">
+            <img src={v.image} alt={v.model} className="h-44 w-full object-cover" />
+            <div className="p-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-xs font-black text-gray-900 uppercase">{v.model}</h3>
+                <p className="text-sm font-black text-[#1473e6] mt-1">R$ {v.price.toLocaleString('pt-BR')}</p>
+                <p className="text-[8px] font-bold text-gray-400 uppercase mt-1">{v.unit}</p>
               </div>
-              <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Serviços Maggi</h2>
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Excelência em Pós-Venda</p>
+              <button onClick={() => openWhatsApp(`Tenho interesse no ${v.model} da unidade ${v.unit}.`)} className="bg-[#1473e6] text-white p-3.5 rounded-2xl">
+                <ChevronRight size={18} />
+              </button>
             </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
-            <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-[#0071C2] text-white rounded-xl shadow-md"><Store size={18} /></div>
+  const renderMyVehicle = () => (
+    <div className="p-6 space-y-6 animate-in fade-in pb-24">
+      <div className="p-8 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm space-y-6">
+        <div className="flex justify-between items-start border-b border-gray-50 pb-4">
+          <div className="space-y-1">
+            <h3 className="text-lg font-black uppercase text-gray-900 leading-tight">VW Nivus Highline</h3>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Placa: ABC-1234 • Cinza Moonstone</p>
+          </div>
+          <div className="p-3 bg-blue-50 rounded-2xl text-[#1473e6]">
+            <Car size={24} />
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <h4 className="text-[10px] font-black uppercase text-gray-900 flex items-center gap-2">
+            <History size={14} className="text-blue-600" /> Dados Detran
+          </h4>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-4 bg-gray-50 rounded-2xl">
+              <p className="text-[8px] font-black uppercase text-gray-400">IPVA 2024</p>
+              <p className="text-[10px] font-black text-green-600 uppercase mt-1">Pago</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-2xl">
+              <p className="text-[8px] font-black uppercase text-gray-400">Licenciamento</p>
+              <p className="text-[10px] font-black text-green-600 uppercase mt-1">Em dia</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="text-[10px] font-black uppercase text-gray-900 flex items-center gap-2">
+            <CheckCircle2 size={14} className="text-blue-600" /> Histórico Maggi
+          </h4>
+          <div className="space-y-2">
+            {[
+              { date: '12/05/2024', desc: 'Revisão de 20.000km', unit: 'Maggi Itu' },
+              { date: '10/11/2023', desc: 'Troca de Óleo', unit: 'Maggi Indaiatuba' }
+            ].map((h, i) => (
+              <div key={i} className="flex justify-between items-center p-4 bg-blue-50/20 rounded-2xl border border-blue-50/50">
                 <div>
-                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loja Selecionada</h4>
-                  <p className="text-sm font-black text-[#0a1d37]">{currentUnit.name}</p>
+                  <p className="text-[10px] font-black text-gray-800 uppercase">{h.desc}</p>
+                  <p className="text-[8px] font-bold text-gray-400 uppercase">{h.date} • {h.unit}</p>
                 </div>
+                <FileText size={16} className="text-blue-300" />
               </div>
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-[11px] font-black text-[#0a1d37] uppercase tracking-[0.3em] border-l-4 border-[#0071C2] pl-4">Escolha o Serviço</h3>
-              <div className="space-y-3">
-                {servicesList.map((service, i) => (
-                  <button 
-                    key={i} 
-                    onClick={() => handleServiceClick(service.name)}
-                    className="w-full flex items-center justify-between p-5 bg-white border border-gray-100 rounded-[2rem] shadow-sm active:scale-[0.98] transition-all group hover:border-[#0071C2]/30"
-                  >
-                    <div className="flex items-center gap-4 text-left">
-                      <div className="p-3 bg-gray-50 rounded-xl text-[#0071C2] group-hover:bg-[#0071C2] group-hover:text-white transition-colors">
-                        <service.icon size={20} />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-black text-[#0a1d37] uppercase">{service.name}</h4>
-                        <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5">{service.desc}</p>
-                      </div>
-                    </div>
-                    <ChevronRight size={18} className="text-gray-300" />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button 
-              onClick={() => setIsChangingUnit(true)}
-              className="w-full py-4 text-[10px] font-black text-[#0071C2] uppercase tracking-[0.2em] border border-[#0071C2]/20 rounded-2xl flex items-center justify-center gap-2 active:bg-blue-50 transition-colors"
-            >
-              <RefreshCw size={14} /> Trocar Concessionária Maggi
-            </button>
-          </>
-        )}
-
-        {schedulingStep === 'DATES' && (
-          <div className="space-y-8 animate-in slide-in-from-right duration-300">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setSchedulingStep('LIST')} className="p-2 text-gray-400"><ChevronLeft size={24} /></button>
-              <h3 className="text-lg font-black text-[#0a1d37] uppercase tracking-tighter">Proponha 3 Datas</h3>
-            </div>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest leading-relaxed">Indique três datas preferenciais e nossa equipe confirmará a melhor opção para você.</p>
-            
-            <div className="space-y-4">
-              {[0, 1, 2].map(i => (
-                <div key={i} className="space-y-2">
-                  <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Opção {i + 1}</label>
-                  <input 
-                    type="date" 
-                    value={proposedDates[i]}
-                    onChange={(e) => {
-                      const newDates = [...proposedDates];
-                      newDates[i] = e.target.value;
-                      setProposedDates(newDates);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 font-bold text-[#0a1d37]" 
-                  />
-                </div>
-              ))}
-            </div>
-
-            <button 
-              onClick={handleConfirmDates}
-              disabled={proposedDates.some(d => !d)}
-              className="w-full bg-[#0071C2] text-white py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all disabled:opacity-30"
-            >
-              Próximo Passo <ArrowRight size={20} className="inline ml-2" />
-            </button>
+            ))}
           </div>
-        )}
-
-        {schedulingStep === 'QUESTIONS' && (
-          <div className="space-y-8 animate-in slide-in-from-right duration-300">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setSchedulingStep('DATES')} className="p-2 text-gray-400"><ChevronLeft size={24} /></button>
-              <h3 className="text-lg font-black text-[#0a1d37] uppercase tracking-tighter">Sobre o Veículo</h3>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase text-gray-400 ml-1 tracking-widest">Placa do Carro</label>
-                <input 
-                  type="text" 
-                  placeholder="Ex: ABC-1234"
-                  value={revQuestionnaire.plate}
-                  onChange={(e) => setRevQuestionnaire({...revQuestionnaire, plate: e.target.value.toUpperCase()})}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none font-bold placeholder:text-gray-300"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase text-gray-400 ml-1 tracking-widest">KM Atual</label>
-                <input 
-                  type="number" 
-                  placeholder="Ex: 25000"
-                  value={revQuestionnaire.km}
-                  onChange={(e) => setRevQuestionnaire({...revQuestionnaire, km: e.target.value})}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none font-bold placeholder:text-gray-300"
-                />
-              </div>
-            </div>
-
-            <button 
-              onClick={handleFinalSubmit}
-              disabled={!revQuestionnaire.plate || !revQuestionnaire.km}
-              className="w-full bg-[#f89a1e] text-white py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all disabled:opacity-30"
-            >
-              Solicitar Agendamento <Rocket size={20} className="inline ml-2" />
-            </button>
-          </div>
-        )}
-
-        {schedulingStep === 'SUCCESS' && (
-          <div className="text-center py-10 space-y-6 animate-in zoom-in duration-500">
-            <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto text-green-500">
-              <CheckCircle2 size={50} />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-black text-[#0a1d37] uppercase tracking-tight">Solicitação Enviada!</h3>
-              <p className="text-xs text-gray-400 font-bold uppercase leading-relaxed px-4">Recebemos seu pedido para a unidade {currentUnit.name}. Retornaremos em breve.</p>
-            </div>
-            <button 
-              onClick={resetFlow}
-              className="w-full bg-[#0071C2] text-white py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em]"
-            >
-              Voltar aos Serviços
-            </button>
-          </div>
-        )}
-
-        {isChangingUnit && (
-          <div className="fixed inset-0 z-[110] flex items-end justify-center animate-in fade-in duration-300">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsChangingUnit(false)} />
-            <div className="relative bg-white w-full max-w-md rounded-t-[3rem] p-10 shadow-2xl animate-in slide-in-from-bottom-20 duration-500 max-h-[80vh] overflow-y-auto text-[#0a1d37]">
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-lg font-black uppercase tracking-tight">Escolha outra Maggi</h3>
-                <button onClick={() => setIsChangingUnit(false)} className="p-2 text-gray-300"><X size={20} /></button>
-              </div>
-              <div className="space-y-3">
-                {MOCK_UNITS.map(u => (
-                  <button 
-                    key={u.id}
-                    onClick={() => { setCurrentUnit(u); setIsChangingUnit(false); }}
-                    className={`w-full p-6 rounded-2xl border text-left flex items-center justify-between transition-all ${currentUnit.id === u.id ? 'border-[#0071C2] bg-blue-50/50' : 'border-gray-100 hover:border-blue-100'}`}
-                  >
-                    <div>
-                      <h4 className="text-sm font-black">{u.name}</h4>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">{u.city} - {u.state}</p>
-                    </div>
-                    {currentUnit.id === u.id && <CheckCircle2 size={18} className="text-[#0071C2]" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderOffers = () => {
-    // Algoritmo de Prioridade:
-    // 1. Pós-venda (SERVICE)
-    // 2. Carro Zero (SALES + badge "Novo 0km")
-    // 3. Multimarcas (SALES + outros)
-    const getPriority = (c: Campaign) => {
-      if (c.type === 'SERVICE') return 1;
-      if (c.badge === 'Novo 0km') return 2;
-      return 3;
-    };
-
-    const sortedCampaigns = [...MOCK_CAMPAIGNS].sort((a, b) => getPriority(a) - getPriority(b));
-
-    return (
-      <div className="p-8 space-y-10 animate-in fade-in bg-white rounded-t-[3rem] mt-4 min-h-[85vh] pb-32">
-        <div className="text-center space-y-3">
-          <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mx-auto text-[#f89a1e]">
-            <Tag size={40} />
-          </div>
-          <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Ofertas Maggi</h2>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Oportunidades em {currentUnit.name}</p>
-        </div>
-
-        <div className="space-y-6">
-          {sortedCampaigns.map((camp, i) => {
-            const isService = camp.type === 'SERVICE';
-            const isZero = camp.badge === 'Novo 0km';
-            
-            return (
-              <div key={camp.id} className="relative group overflow-hidden rounded-[2.5rem] shadow-xl border border-gray-100 animate-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${i * 100}ms` }}>
-                <div className="h-48 overflow-hidden relative">
-                  <img src={camp.image} alt={camp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[2s]" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute top-6 left-6 flex gap-2">
-                    <span className={`px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg ${
-                      isService ? 'bg-blue-600 text-white' : isZero ? 'bg-orange-500 text-white' : 'bg-green-600 text-white'
-                    }`}>
-                      {camp.badge}
-                    </span>
-                  </div>
-                  {isService && (
-                    <div className="absolute top-6 right-6 p-2 bg-white/20 backdrop-blur-md rounded-xl text-white">
-                      <Wrench size={16} />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="p-8 bg-white space-y-4">
-                  <div>
-                    <h3 className="text-lg font-black text-[#0a1d37] uppercase tracking-tight leading-tight">{camp.title}</h3>
-                    <p className="text-xs text-gray-400 font-medium mt-2 leading-relaxed">{camp.subtitle}</p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <Clock size={12} />
-                      <span className="text-[9px] font-black uppercase tracking-widest">Até {camp.validUntil}</span>
-                    </div>
-                    <button 
-                      onClick={() => openWhatsApp(`Olá! Vi a oferta "${camp.title}" e tenho interesse.`)}
-                      className="bg-[#0071C2] text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-transform"
-                    >
-                      Aproveitar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 text-center">
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
-            Campanhas exclusivas para clientes da unidade {currentUnit.name}.<br/>Sujeito a disponibilidade de estoque.
-          </p>
         </div>
       </div>
-    );
-  };
+      <button onClick={() => setActiveView(AppView.SCHEDULE)} className="w-full py-5 bg-[#1473e6] text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100">Agendar Novo Serviço</button>
+    </div>
+  );
 
   const renderConsortium = () => (
-    <div className="p-8 space-y-10 animate-in fade-in bg-white rounded-t-[3rem] mt-4 min-h-[85vh] pb-32">
-      <div className="text-center space-y-3">
-        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-[#0071C2]">
-          <PiggyBank size={40} />
+    <div className="p-6 space-y-8 animate-in fade-in pb-24">
+       <div className="text-center space-y-3 pt-4">
+        <div className="w-20 h-20 bg-blue-50 rounded-[2rem] flex items-center justify-center mx-auto text-[#1473e6] shadow-inner">
+          <PieChart size={40} />
         </div>
-        <h2 className="text-2xl font-black text-[#0a1d37] uppercase tracking-tighter">Consórcio Maggi</h2>
-        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">O Plano Certo para Você</p>
+        <h2 className="text-xl font-black uppercase tracking-tight text-gray-900">Maggi Consórcios</h2>
+        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider px-8 leading-relaxed">Planeje sua conquista sem juros com as cartas de crédito Maggi.</p>
+        
+        {/* Botão Quero Simular */}
+        <button 
+          onClick={() => openWhatsApp("Olá, gostaria de realizar uma simulação de consórcio.")}
+          className="flex items-center justify-center gap-3 bg-[#1473e6] text-white w-full py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.1em] shadow-xl shadow-blue-100 active:scale-95 transition-all mt-4"
+        >
+          <Calculator size={18} />
+          Quero Simular
+        </button>
       </div>
 
-      <div className="bg-[#0071C2] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-10"><Fingerprint size={120} /></div>
-        <div className="relative z-10 space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-sm font-black uppercase tracking-wider">Área do Consorciado</h3>
-            <p className="text-[10px] text-blue-100/60 font-medium uppercase tracking-widest">Acesse seu contrato agora</p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase tracking-[0.2em] ml-1 opacity-70">Grupo</label>
-              <input 
-                type="text" 
-                value={consortiumGroup}
-                onChange={(e) => setConsortiumGroup(e.target.value)}
-                placeholder="Ex: 0045"
-                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:bg-white/20 transition-all placeholder:text-blue-100/30 font-bold"
-              />
+      <div className="p-6 bg-[#1473e6] rounded-[2.5rem] text-white shadow-xl space-y-6">
+         <h3 className="text-[10px] font-black uppercase tracking-widest border-b border-white/20 pb-2">Suas Cartas</h3>
+         <div className="space-y-3">
+            <div className="bg-white/10 p-4 rounded-2xl border border-white/20">
+              <div className="flex justify-between items-start">
+                <p className="text-[8px] font-black uppercase opacity-60">Cota Automóveis</p>
+                <span className="text-[8px] font-black uppercase px-2 py-0.5 bg-green-500 rounded-full">Contemplada</span>
+              </div>
+              <p className="text-lg font-black mt-1">R$ 85.000,00</p>
             </div>
-            <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase tracking-[0.2em] ml-1 opacity-70">Cota</label>
-              <input 
-                type="text" 
-                value={consortiumQuota}
-                onChange={(e) => setConsortiumQuota(e.target.value)}
-                placeholder="Ex: 120"
-                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:bg-white/20 transition-all placeholder:text-blue-100/30 font-bold"
-              />
-            </div>
-            <button 
-              onClick={handleConsortiumAccess}
-              disabled={isConsortiumLoading || !consortiumGroup || !consortiumQuota}
-              className="w-full bg-[#f89a1e] text-white py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-            >
-              {isConsortiumLoading ? <Loader2 className="animate-spin" size={18} /> : <>Consultar Minha Cota <ChevronRight size={16} /></>}
-            </button>
-          </div>
-        </div>
+         </div>
       </div>
 
-      <div className="space-y-6">
-        <h3 className="text-[11px] font-black text-[#0a1d37] uppercase tracking-[0.3em] border-l-4 border-[#0071C2] pl-4">Setores que Atendemos</h3>
-        <div className="grid grid-cols-3 gap-3">
+      <div className="space-y-4">
+        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Escolha sua modalidade</h3>
+        <div className="grid grid-cols-2 gap-3">
           {[
-            { icon: Car, label: 'Carros' },
-            { icon: Bike, label: 'Motos' },
-            { icon: Truck, label: 'Caminhões' },
-            { icon: Tractor, label: 'Maquinário' }, 
-            { icon: HomeIcon, label: 'Casa/Imóvel' },
-            { icon: Landmark, label: 'Serviços' },
-          ].map((item, i) => (
-            <div key={i} className="flex flex-col items-center justify-center p-5 bg-gray-50 border border-gray-100 rounded-[2rem] text-center gap-2 group hover:bg-white hover:border-blue-200 transition-all shadow-sm">
-              <div className="text-[#0071C2] group-hover:scale-110 transition-transform"><item.icon size={24} /></div>
-              <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">{item.label}</span>
-            </div>
+            { label: 'Carros', icon: Car },
+            { label: 'Motos', icon: Bike },
+            { label: 'Caminhões', icon: Truck },
+            { label: 'Agro', icon: Tractor },
+            { label: 'Imóveis', icon: HomeIcon },
+            { label: 'Serviços', icon: Wrench }
+          ].map((m, i) => (
+            <button key={i} className="flex flex-col items-center gap-3 p-6 bg-white border border-gray-100 rounded-3xl active:scale-95 transition-all shadow-sm">
+              <m.icon size={24} className="text-[#1473e6]" />
+              <span className="text-[9px] font-black uppercase text-gray-900">{m.label}</span>
+            </button>
           ))}
         </div>
       </div>
+    </div>
+  );
 
-      <div className="pt-4">
+  const renderInsurance = () => (
+    <div className="p-6 space-y-8 animate-in fade-in pb-24">
+      <div className="text-center space-y-3 pt-4">
+        <div className="w-20 h-20 bg-blue-50 rounded-[2rem] flex items-center justify-center mx-auto text-[#1473e6] shadow-inner">
+          <ShieldCheck size={40} />
+        </div>
+        <h2 className="text-xl font-black uppercase tracking-tight text-gray-900">Maggi Seguros</h2>
+        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider px-8 leading-relaxed">Proteção completa para o seu patrimônio com a segurança das Empresas Maggi.</p>
+        
+        {/* Botão Quero Simular */}
         <button 
-          onClick={() => openWhatsApp("Olá! Quero fazer uma simulação de consórcio.")}
-          className="w-full bg-[#0071C2] text-white py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+          onClick={() => openWhatsApp("Olá, gostaria de realizar uma simulação de seguro.")}
+          className="flex items-center justify-center gap-3 bg-[#1473e6] text-white w-full py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.1em] shadow-xl shadow-blue-100 active:scale-95 transition-all mt-4"
         >
-          Faça sua Simulação <Rocket size={20} />
+          <Calculator size={18} />
+          Quero Simular
         </button>
       </div>
+
+      {/* Meus Seguros */}
+      <div className="p-6 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-gray-50 pb-4">
+          <h3 className="text-[10px] font-black uppercase text-gray-400">Meus Seguros Ativos</h3>
+          <span className="text-[8px] font-black bg-green-50 text-green-600 px-2 py-0.5 rounded-full uppercase">1 Ativo</span>
+        </div>
+        <div className="flex items-center gap-4">
+           <div className="p-3 bg-blue-50 rounded-2xl text-[#1473e6]"><FileText size={20} /></div>
+           <div>
+              <h3 className="text-xs font-black uppercase text-gray-900">Seguro Auto Premium</h3>
+              <p className="text-[8px] font-bold text-gray-400 uppercase">Azul Seguros • Até 15/12/2024</p>
+           </div>
+        </div>
+        <button className="w-full py-3 bg-gray-50 rounded-xl text-[9px] font-black uppercase text-blue-600">Ver Apólice</button>
+      </div>
+
+      {/* Categorias de Seguros Maggi */}
+      <div className="space-y-4">
+        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Nossas Soluções de Seguro</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {INSURANCE_CATEGORIES.map((item) => {
+            const Icon = {
+              car: Car,
+              home: HomeIcon,
+              heart: Heart,
+              briefcase: Briefcase,
+              tractor: Tractor,
+              wrench: Wrench
+            }[item.icon] || Shield;
+
+            return (
+              <button 
+                key={item.id} 
+                onClick={() => openWhatsApp(`Olá, gostaria de saber mais sobre o Seguro ${item.label}.`)}
+                className="flex flex-col items-center gap-3 p-6 bg-white border border-gray-100 rounded-3xl active:scale-95 transition-all shadow-sm text-center"
+              >
+                <div className="p-3 bg-blue-50 rounded-2xl text-[#1473e6]">
+                  <Icon size={24} />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase text-gray-900 block">{item.label}</span>
+                  <span className="text-[7px] font-bold text-gray-400 uppercase block leading-tight">{item.description}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 
-  const renderProfile = () => (
-    <div className="p-8 space-y-10 animate-in fade-in bg-white rounded-t-[3rem] mt-4 min-h-[85vh] pb-32">
-      <div className="flex items-center gap-6">
-        <div className="w-20 h-20 bg-[#0071C2] rounded-3xl flex items-center justify-center text-white text-2xl font-black shadow-lg">JD</div>
-        <div>
-          <h2 className="text-xl font-black text-[#0a1d37] uppercase tracking-tight">João da Silva</h2>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Cliente Maggi desde 2018</p>
+  const renderSchedule = () => (
+    <div className="p-6 space-y-8 animate-in fade-in pb-24">
+      <div className="text-center space-y-3 pt-4">
+        <div className="w-20 h-20 bg-blue-50 rounded-[2rem] flex items-center justify-center mx-auto text-[#1473e6] shadow-inner">
+          <Wrench size={40} />
+        </div>
+        <h2 className="text-xl font-black uppercase tracking-tight text-gray-900">Agendamento Online</h2>
+        <div className="flex items-center justify-center gap-2 bg-blue-50/50 py-2 px-4 rounded-full mx-auto w-fit">
+          <MapPin size={12} className="text-[#1473e6]" />
+          <span className="text-[9px] font-black uppercase text-gray-600">Agendando em: {selectedUnit}</span>
         </div>
       </div>
 
-      <div className="space-y-6">
-        <h3 className="text-[11px] font-black text-[#0071C2] uppercase tracking-[0.3em] border-l-4 border-[#0071C2] pl-4">Institucional</h3>
-        <div className="space-y-4">
-          <button onClick={() => setSelectedDna('mission')} className="w-full text-left p-6 bg-gray-50 rounded-[2rem] border border-gray-100 shadow-sm active:scale-[0.98] transition-all">
-            <div className="flex items-center gap-4 mb-3">
-              <div className="p-3 bg-white rounded-xl text-[#0071C2] shadow-sm"><Rocket size={20} /></div>
-              <h4 className="text-sm font-black text-[#0a1d37] uppercase tracking-wider">Nossa Missão</h4>
-            </div>
-            <p className="text-xs text-gray-500 leading-relaxed font-medium italic">"Prover as melhores soluções de mobilidade..."</p>
-          </button>
-          <button onClick={() => setSelectedDna('vision')} className="w-full text-left p-6 bg-gray-50 rounded-[2rem] border border-gray-100 shadow-sm active:scale-[0.98] transition-all">
-            <div className="flex items-center gap-4 mb-3">
-              <div className="p-3 bg-white rounded-xl text-[#0071C2] shadow-sm"><Eye size={20} /></div>
-              <h4 className="text-sm font-black text-[#0a1d37] uppercase tracking-wider">Nossa Visão</h4>
-            </div>
-            <p className="text-xs text-gray-500 leading-relaxed font-medium italic">"Ser o grupo de concessionárias mais admirado do Brasil..."</p>
-          </button>
-          <div className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-4 mb-3">
-              <div className="p-3 bg-white rounded-xl text-[#0071C2] shadow-sm"><Briefcase size={20} /></div>
-              <h4 className="text-sm font-black text-[#0a1d37] uppercase tracking-wider">Nossos Valores</h4>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {['Ética Absoluta', 'Foco no Cliente', 'Inovação', 'Gente Maggi'].map(v => (
-                <div key={v} onClick={() => setSelectedDna('values')} className="bg-white px-4 py-2 rounded-xl text-[9px] font-black text-[#0a1d37] border border-gray-100 uppercase text-center shadow-sm cursor-pointer">{v}</div>
-              ))}
-            </div>
-          </div>
+      {/* Escolha da Unidade (Contexto) */}
+      <div className="space-y-2">
+        <label className="text-[10px] font-black uppercase text-gray-400 pl-1">Alterar Unidade</label>
+        <select 
+          value={selectedUnit}
+          onChange={(e) => setSelectedUnit(e.target.value)}
+          className="w-full bg-white border border-gray-100 rounded-2xl p-4 text-xs font-bold appearance-none shadow-sm focus:outline-none"
+        >
+          {MOCK_UNITS.map(u => <option key={u.id} value={u.name}>{u.city} - {u.name}</option>)}
+        </select>
+      </div>
+
+      {/* Opções de Serviços */}
+      <div className="space-y-4">
+        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Selecione o Serviço</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {SERVICE_OPTIONS.map((service) => {
+            const Icon = {
+              droplet: Droplet,
+              disc: Disc,
+              'clipboard-list': ClipboardList,
+              'map-pin': MapPin
+            }[service.icon] || Wrench;
+
+            return (
+              <button 
+                key={service.id} 
+                onClick={() => openWhatsApp(`Olá, gostaria de agendar uma ${service.label} na unidade ${selectedUnit}.`)}
+                className="flex flex-col items-center gap-3 p-6 bg-white border border-gray-100 rounded-3xl active:scale-95 transition-all shadow-sm text-center"
+              >
+                <div className="p-3 bg-blue-50 rounded-2xl text-[#1473e6]">
+                  <Icon size={24} />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase text-gray-900 block">{service.label}</span>
+                  <span className="text-[7px] font-bold text-gray-400 uppercase block leading-tight">{service.description}</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <button className="w-full flex items-center justify-between p-6 bg-red-50 text-red-500 rounded-3xl font-black uppercase text-[10px] tracking-widest mt-12 active:scale-95 transition-transform">
-        Sair da Conta <LogOut size={18} />
-      </button>
-    </div>
-  );
-
-  const renderMaggiBot = () => (
-    <div className="flex flex-col h-full bg-white animate-in slide-in-from-right duration-300">
-      <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-        <div>
-          <h2 className="text-lg font-black text-[#0a1d37] uppercase tracking-tighter flex items-center gap-2">MaggiBot 3.0 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /></h2>
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Seu concierge inteligente</p>
-        </div>
-        <div className="p-3 bg-blue-50 rounded-2xl text-[#0071C2]"><Sparkles size={20} /></div>
-      </div>
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/30">
-        {chatMessages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-40 py-20">
-            <div className="p-6 bg-white rounded-full shadow-sm"><MessageCircle size={40} className="text-[#0071C2]" /></div>
-            <p className="text-xs font-medium max-w-[200px]">Olá! Sou o MaggiBot. No que posso te ajudar hoje?</p>
-          </div>
-        )}
-        {chatMessages.map((msg, idx) => (
-          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-1`}>
-            <div className={`max-w-[85%] p-4 rounded-[1.5rem] text-sm shadow-sm ${msg.role === 'user' ? 'bg-[#0071C2] text-white rounded-tr-none' : 'bg-white border border-gray-100 text-[#0a1d37] rounded-tl-none'}`}>{msg.text}</div>
-          </div>
-        ))}
-        {isChatLoading && (
-          <div className="flex justify-start animate-pulse">
-            <div className="bg-white border border-gray-100 p-4 rounded-[1.5rem] rounded-tl-none shadow-sm"><Loader2 className="animate-spin text-[#0071C2]" size={16} /></div>
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
-      <div className="p-6 bg-white border-t border-gray-100 pb-24">
-        <div className="flex gap-3 bg-gray-50 border border-gray-100 rounded-2xl p-2 pl-6">
-          <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} placeholder="Pergunte sobre carros..." className="flex-1 bg-transparent border-none focus:outline-none text-sm py-3 font-medium" />
-          <button onClick={handleSendMessage} disabled={isChatLoading || !chatInput.trim()} className="bg-[#0071C2] text-white p-4 rounded-xl shadow-lg active:scale-90 transition-transform disabled:opacity-30"><Send size={18} /></button>
-        </div>
+      {/* CTA Adicional */}
+      <div className="p-6 bg-gray-50 rounded-[2rem] border border-dashed border-gray-200 text-center space-y-2">
+        <p className="text-[9px] font-black uppercase text-gray-500">Precisa de outro serviço?</p>
+        <button onClick={() => openWhatsApp(`Olá, preciso de um serviço específico para meu carro na unidade ${selectedUnit}.`)} className="text-xs font-black uppercase text-[#1473e6] underline">Falar com Consultor Técnico</button>
       </div>
     </div>
   );
@@ -729,14 +510,31 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeView) {
       case AppView.HOME: return renderHome();
-      case AppView.CHAT: return renderMaggiBot();
-      case AppView.MY_VEHICLE: return <div className="p-8"><h2 className="text-2xl font-black uppercase text-[#0a1d37]">Meu Veículo</h2></div>; 
-      case AppView.UNITS: return <div className="p-8"><h2 className="text-2xl font-black uppercase text-[#0a1d37]">Nossas Lojas</h2></div>;
-      case AppView.PROFILE: return renderProfile();
-      case AppView.STOCK: return <div className="p-8"><h2 className="text-2xl font-black uppercase text-[#0a1d37]">Carro Novo Maggi</h2></div>;
-      case AppView.OFFERS: return renderOffers();
-      case AppView.SCHEDULE: return renderSchedule();
+      case AppView.STOCK: return renderStock();
+      case AppView.MY_VEHICLE: return renderMyVehicle();
       case AppView.CONSORTIUM: return renderConsortium();
+      case AppView.INSURANCE: return renderInsurance();
+      case AppView.SCHEDULE: return renderSchedule();
+      case AppView.UNITS: return (
+        <div className="p-6 space-y-4 animate-in fade-in pb-24">
+          <h2 className="text-sm font-black uppercase text-gray-900 pl-1">Unidades Empresas Maggi</h2>
+          {MOCK_UNITS.map(unit => (
+            <div key={unit.id} className="p-6 bg-white border border-gray-100 rounded-3xl space-y-3 shadow-sm group active:bg-blue-50/30 transition-colors">
+              <h3 className="font-black uppercase text-[11px] text-[#1473e6] flex items-center gap-2"><MapPin size={14} /> {unit.name}</h3>
+              <p className="text-[10px] text-gray-500 font-medium leading-tight">{unit.address} • {unit.city}/{unit.state}</p>
+              <button onClick={() => openWhatsApp(`Contato unidade ${unit.name}`)} className="w-full py-3 bg-blue-50 rounded-xl text-[9px] font-black uppercase text-[#1473e6]">Contato Unidade</button>
+            </div>
+          ))}
+        </div>
+      );
+      case AppView.CHAT: return <div className="p-8 text-center pt-20 animate-in fade-in">
+        <Sparkles size={40} className="mx-auto text-blue-500 opacity-20" />
+        <p className="text-[10px] font-black uppercase text-gray-400 mt-4">MaggiBot está em manutenção.</p>
+      </div>;
+      case AppView.PROFILE: return <div className="p-8 text-center pt-20 animate-in fade-in">
+        <User size={40} className="mx-auto text-blue-500 opacity-20" />
+        <p className="text-[10px] font-black uppercase text-gray-400 mt-4">Perfil do Usuário.</p>
+      </div>;
       default: return renderHome();
     }
   };
@@ -744,7 +542,6 @@ const App: React.FC = () => {
   return (
     <Layout activeView={activeView} setActiveView={setActiveView}>
       {renderContent()}
-      {renderDnaModal()}
     </Layout>
   );
 };
